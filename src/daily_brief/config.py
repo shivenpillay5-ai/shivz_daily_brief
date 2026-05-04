@@ -1,0 +1,226 @@
+from __future__ import annotations
+
+import os
+import re
+from dataclasses import dataclass, field
+from pathlib import Path
+
+
+DEFAULT_NEWS_FEEDS = (
+    "BBC World|https://feeds.bbci.co.uk/news/world/rss.xml;"
+    "The Guardian World|https://www.theguardian.com/world/rss;"
+    "NPR World|https://feeds.npr.org/1004/rss.xml;"
+    "UN News|https://news.un.org/feed/subscribe/en/news/all/rss.xml"
+)
+
+DEFAULT_AI_TECH_FEEDS = (
+    "OpenAI News|https://openai.com/news/rss.xml;"
+    "Google AI Blog|https://blog.google/technology/ai/rss/;"
+    "TechCrunch AI|https://techcrunch.com/category/artificial-intelligence/feed/;"
+    "VentureBeat AI|https://venturebeat.com/category/ai/feed/;"
+    "MIT Technology Review AI|https://www.technologyreview.com/topic/artificial-intelligence/feed/"
+)
+
+DEFAULT_WEATHER_LOCATIONS = (
+    "Midrand|-25.9992|28.1263|Africa/Johannesburg|hourly;"
+    "Johannesburg|-26.2041|28.0473|Africa/Johannesburg;"
+    "Cape Town|-33.9249|18.4241|Africa/Johannesburg;"
+    "Durban|-29.8587|31.0218|Africa/Johannesburg"
+)
+
+
+@dataclass(frozen=True)
+class FeedConfig:
+    name: str
+    url: str
+
+
+@dataclass(frozen=True)
+class LocationConfig:
+    name: str
+    latitude: float
+    longitude: float
+    timezone: str
+    hourly: bool = False
+
+
+@dataclass(frozen=True)
+class EmailConfig:
+    smtp_host: str
+    smtp_port: int
+    smtp_use_tls: bool
+    smtp_username: str
+    smtp_password: str
+    email_from: str
+    email_to: list[str]
+    subject_prefix: str
+
+
+@dataclass(frozen=True)
+class WhatsAppConfig:
+    enabled: bool
+    phone_number_id: str
+    business_account_id: str
+    access_token: str
+    recipients: list[str]
+    api_version: str
+
+
+@dataclass(frozen=True)
+class AppConfig:
+    location: LocationConfig
+    email: EmailConfig
+    whatsapp: WhatsAppConfig
+    news_feeds: list[FeedConfig]
+    ai_tech_feeds: list[FeedConfig]
+    top_n: int
+    openai_api_key: str
+    openai_model: str
+    market_pulse_enabled: bool
+    weather_locations: list[LocationConfig] = field(default_factory=list)
+
+
+def load_env_file(path: Path, override: bool = False) -> None:
+    if not path.exists():
+        return
+
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if override:
+            os.environ[key] = value
+        else:
+            os.environ.setdefault(key, value)
+
+
+def load_config(env_file: Path | None = None) -> AppConfig:
+    project_root = Path(__file__).resolve().parents[2]
+    load_env_file(project_root / ".env")
+    if env_file is not None:
+        load_env_file(env_file, override=True)
+
+    primary_location = LocationConfig(
+        name=_get("LOCATION_NAME", "Johannesburg"),
+        latitude=float(_get("LATITUDE", "-26.2041")),
+        longitude=float(_get("LONGITUDE", "28.0473")),
+        timezone=_get("TIMEZONE", "Africa/Johannesburg"),
+    )
+
+    return AppConfig(
+        location=primary_location,
+        email=EmailConfig(
+            smtp_host=_get("SMTP_HOST", ""),
+            smtp_port=int(_get("SMTP_PORT", "587")),
+            smtp_use_tls=_get_bool("SMTP_USE_TLS", True),
+            smtp_username=_get("SMTP_USERNAME", ""),
+            smtp_password=_get_secret("SMTP_PASSWORD", ""),
+            email_from=_get("EMAIL_FROM", ""),
+            email_to=_split_csv(_get("EMAIL_TO", "")),
+            subject_prefix=_get("EMAIL_SUBJECT_PREFIX", "Shivz Daily Brief"),
+        ),
+        whatsapp=WhatsAppConfig(
+            enabled=_get_bool("WHATSAPP_ENABLED", False),
+            phone_number_id=_get("WHATSAPP_PHONE_NUMBER_ID", ""),
+            business_account_id=_get("WHATSAPP_BUSINESS_ACCOUNT_ID", ""),
+            access_token=_get_secret("WHATSAPP_ACCESS_TOKEN", ""),
+            recipients=_split_phone_numbers(_get("WHATSAPP_TO", "")),
+            api_version=_get("WHATSAPP_API_VERSION", "v24.0"),
+        ),
+        news_feeds=_parse_feeds(_get("NEWS_FEEDS", DEFAULT_NEWS_FEEDS)),
+        ai_tech_feeds=_parse_feeds(_get("AI_TECH_FEEDS", DEFAULT_AI_TECH_FEEDS)),
+        top_n=int(_get("TOP_N", "5")),
+        openai_api_key=_get("OPENAI_API_KEY", ""),
+        openai_model=_get("OPENAI_MODEL", "gpt-5"),
+        market_pulse_enabled=_get_bool("MARKET_PULSE_ENABLED", True),
+        weather_locations=_parse_locations(
+            _get("WEATHER_LOCATIONS", DEFAULT_WEATHER_LOCATIONS)
+        )
+        or [primary_location],
+    )
+
+
+def _get(name: str, default: str) -> str:
+    value = os.getenv(name)
+    if value is None or value.strip() == "":
+        return default
+    return value.strip()
+
+
+def _get_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None or value.strip() == "":
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _get_secret(name: str, default: str) -> str:
+    value = _get(name, default)
+    return re.sub(r"\s+", "", value)
+
+
+def _split_csv(value: str) -> list[str]:
+    return [part.strip() for part in value.split(",") if part.strip()]
+
+
+def _split_phone_numbers(value: str) -> list[str]:
+    numbers: list[str] = []
+    for part in _split_csv(value):
+        normalized = re.sub(r"\D+", "", part)
+        if normalized:
+            numbers.append(normalized)
+    return numbers
+
+
+def _parse_feeds(value: str) -> list[FeedConfig]:
+    feeds: list[FeedConfig] = []
+    for raw_part in value.split(";"):
+        part = raw_part.strip()
+        if not part:
+            continue
+
+        if "|" not in part:
+            raise ValueError(f"Feed entry must be Name|URL: {part}")
+
+        name, url = part.split("|", 1)
+        feeds.append(FeedConfig(name=name.strip(), url=url.strip()))
+
+    return feeds
+
+
+def _parse_locations(value: str) -> list[LocationConfig]:
+    locations: list[LocationConfig] = []
+    for raw_part in value.split(";"):
+        part = raw_part.strip()
+        if not part:
+            continue
+
+        pieces = [piece.strip() for piece in part.split("|")]
+        if len(pieces) not in {4, 5}:
+            raise ValueError(
+                "Weather location must be Name|Latitude|Longitude|Timezone"
+                " or Name|Latitude|Longitude|Timezone|hourly"
+            )
+
+        name, latitude, longitude, timezone = pieces[:4]
+        hourly = len(pieces) == 5 and pieces[4].lower() in {
+            "hourly",
+            "true",
+            "yes",
+            "1",
+        }
+        locations.append(
+            LocationConfig(
+                name=name,
+                latitude=float(latitude),
+                longitude=float(longitude),
+                timezone=timezone,
+                hourly=hourly,
+            )
+        )
+
+    return locations

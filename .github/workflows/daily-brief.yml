@@ -1,0 +1,60 @@
+name: Shivz Daily Brief
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 7 * * *"
+      timezone: "Africa/Johannesburg"
+
+jobs:
+  send-brief:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_MODEL: gpt-5
+      MARKET_PULSE_ENABLED: "true"
+
+      LOCATION_NAME: Johannesburg
+      LATITUDE: "-26.2041"
+      LONGITUDE: "28.0473"
+      TIMEZONE: Africa/Johannesburg
+      WEATHER_LOCATIONS: "Midrand|-25.9992|28.1263|Africa/Johannesburg|hourly;Johannesburg|-26.2041|28.0473|Africa/Johannesburg;Cape Town|-33.9249|18.4241|Africa/Johannesburg;Durban|-29.8587|31.0218|Africa/Johannesburg"
+
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: "587"
+      SMTP_USE_TLS: "true"
+      SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+      EMAIL_TO: ${{ secrets.EMAIL_TO }}
+      EMAIL_SUBJECT_PREFIX: Shivz Daily Brief
+
+      WHATSAPP_ENABLED: ${{ secrets.WHATSAPP_ENABLED }}
+      WHATSAPP_API_VERSION: v24.0
+      WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+      WHATSAPP_BUSINESS_ACCOUNT_ID: ${{ secrets.WHATSAPP_BUSINESS_ACCOUNT_ID }}
+      WHATSAPP_ACCESS_TOKEN: ${{ secrets.WHATSAPP_ACCESS_TOKEN }}
+      WHATSAPP_TO: ${{ secrets.WHATSAPP_TO }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Run tests
+        run: python -m unittest discover -s tests
+
+      - name: Send email brief
+        run: daily-brief --send --no-openai

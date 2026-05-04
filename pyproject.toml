@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "daily-brief-agent"
+version = "0.1.0"
+description = "Daily weather, world news, and AI tech email brief."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "tzdata; platform_system == 'Windows'",
+]
+
+[project.scripts]
+daily-brief = "daily_brief.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
