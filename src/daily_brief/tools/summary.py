@@ -142,49 +142,53 @@ def _fallback_summary(facts: dict[str, object]) -> MorningSummary:
     ai_tech = _first_dict(facts.get("ai_tech_news"))
 
     location = str(weather.get("location", "your area"))
-    condition = str(weather.get("condition", "weather"))
-    high = _format_number(weather.get("daily_max_c"), "C")
-    rain = _format_number(weather.get("rain_percent"), "%")
-    market_line = _fallback_market_line(markets)
+    weather_cue = _weather_teaser(weather)
+    market_cue = _market_teaser(markets)
+    world_source = str(world.get("source", "world news"))
+    ai_source = str(ai_tech.get("source", "AI/tech"))
 
     body = (
-        f"{location} starts with {condition}, a high near {high}, and rain around "
-        f"{rain}. {market_line} In the headlines, watch "
-        f"{world.get('title', 'the top world story')} and "
-        f"{ai_tech.get('title', 'the leading AI/tech story')}."
+        f"{location} sets the mood first, with {weather_cue} before the day starts making demands. "
+        f"Markets have a bit of movement, and the news mix has both global stakes and AI drama waiting below."
     )
     bullets = [
-        f"Weather: {location} high {high}, rain {rain}.",
-        market_line,
-        f"News: {world.get('source', 'World')} and {ai_tech.get('source', 'AI/Tech')} lead the scan.",
+        f"Start with the sky over {location}; it sets the practical tone.",
+        market_cue,
+        f"The scan moves from {world_source} to {ai_source}, with the sharper edges saved for the links.",
     ]
     return MorningSummary(
-        headline="Morning Signal",
+        headline="The Day Has Entered The Chat",
         body=body,
         bullets=bullets,
         used_openai=False,
     )
 
 
-def _fallback_market_line(markets: list[dict[str, object]]) -> str:
+def _market_teaser(markets: list[dict[str, object]]) -> str:
     if not markets:
-        return "Market data is still warming up."
+        return "Markets are still warming up in the background."
 
-    parts = []
-    for quote in markets[:2]:
-        label = str(quote.get("label", "Market"))
-        value = quote.get("value")
-        prefix = str(quote.get("prefix", ""))
-        suffix = str(quote.get("suffix", ""))
-        parts.append(f"{label} {prefix}{_format_number(value, '', decimals=2)}{suffix}")
+    moving = [
+        str(quote.get("label", "market"))
+        for quote in markets
+        if isinstance(quote.get("change_percent"), (int, float))
+    ]
+    if moving:
+        return f"Markets are awake enough to make {', '.join(moving[:2])} worth a glance."
 
-    return "Markets: " + ", ".join(parts) + "."
+    return "Markets are on the board, with the detail tucked into the pulse below."
 
 
-def _format_number(value: object, suffix: str, decimals: int = 0) -> str:
-    if isinstance(value, (int, float)):
-        return f"{value:.{decimals}f}{suffix}"
-    return f"unavailable{suffix}"
+def _weather_teaser(weather: dict[str, object]) -> str:
+    rain = weather.get("rain_percent")
+    temperature = weather.get("temperature_c")
+    if isinstance(rain, (int, float)) and rain >= 50:
+        return "umbrella energy in the forecast"
+    if isinstance(temperature, (int, float)) and temperature >= 28:
+        return "the sun clearly auditioning for a bigger role"
+    if isinstance(temperature, (int, float)) and temperature <= 15:
+        return "a jacket making a strong case for itself"
+    return "a fairly civilised weather opening"
 
 
 def _first_dict(value: object) -> dict[str, object]:
