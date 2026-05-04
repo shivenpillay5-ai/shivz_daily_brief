@@ -172,9 +172,6 @@ def _summary_lines(morning_summary: MorningSummary | None) -> list[str]:
         morning_summary.headline,
         morning_summary.body,
     ]
-    if morning_summary.bullets:
-        lines.append("")
-        lines.extend(f"- {bullet}" for bullet in morning_summary.bullets[:3])
     return lines
 
 
@@ -195,33 +192,26 @@ def _summary_section_html(morning_summary: MorningSummary | None) -> str:
     if morning_summary is None:
         return ""
 
-    bullets_html = ""
-    if morning_summary.bullets:
-        bullets_html = "".join(
-            f"""
-            <td valign="top" style="width:33.3%;padding:6px 8px 0 0">
-              <div style="background:#ffffff;border:1px solid #d9e2ec;border-radius:14px;padding:12px;color:#334e68;font-size:13px;line-height:1.45">
-                {html.escape(bullet)}
-              </div>
-            </td>
-            """
-            for bullet in morning_summary.bullets[:3]
-        )
-        bullets_html = f"""
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:12px">
-          <tr>{bullets_html}</tr>
-        </table>
-        """
-
     return f"""
     <div style="margin-bottom:28px">
       <div style="font-size:13px;color:#4f6f7d;font-weight:700;text-transform:uppercase;letter-spacing:.8px">🧭 Morning read</div>
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:8px;border-radius:18px;background:#f3fbfd;border:1px solid #cce8f0">
         <tr>
+          <td valign="top" style="width:72px;padding:22px 0 22px 22px">
+            <div style="width:54px;height:54px;border-radius:16px;background:#184e68;color:#ffffff;text-align:center;line-height:54px;font-size:28px">⚡</div>
+          </td>
           <td style="padding:22px">
-            <h2 style="font-size:25px;line-height:1.2;margin:0 0 8px;color:#102a43">{html.escape(morning_summary.headline)}</h2>
-            <p style="font-size:15px;line-height:1.55;margin:0;color:#334e68">{html.escape(morning_summary.body)}</p>
-            {bullets_html}
+            <table role="presentation" cellspacing="0" cellpadding="0" style="margin-bottom:10px">
+              <tr>
+                <td style="background:#e6fffa;color:#1f7a8c;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px">🌦 Weather</td>
+                <td style="width:6px"></td>
+                <td style="background:#fff5db;color:#8a5a00;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px">💸 Markets</td>
+                <td style="width:6px"></td>
+                <td style="background:#eef2ff;color:#344e86;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px">🤖 Signals</td>
+              </tr>
+            </table>
+            <h2 style="font-size:27px;line-height:1.15;margin:0 0 9px;color:#102a43">{html.escape(morning_summary.headline)}</h2>
+            <p style="font-size:16px;line-height:1.58;margin:0;color:#334e68">{html.escape(morning_summary.body)}</p>
           </td>
         </tr>
       </table>

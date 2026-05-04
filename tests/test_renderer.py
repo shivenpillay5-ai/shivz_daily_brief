@@ -173,6 +173,8 @@ class RendererTests(unittest.TestCase):
         self.assertIn("Morning read", body)
         self.assertIn("Morning Signal", body)
         self.assertIn("A useful morning read.", body)
+        self.assertNotIn("Weather is calm.", body)
+        self.assertIn("⚡", body)
 
     def test_render_whatsapp_text_includes_weather_and_links(self) -> None:
         weather = _weather("Midrand")

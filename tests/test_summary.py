@@ -28,10 +28,11 @@ class SummaryTests(unittest.TestCase):
             use_openai=True,
         )
 
-        self.assertEqual(summary.headline, "The Day Has Entered The Chat")
+        self.assertEqual(summary.headline, "Your Morning, Lightly Stirred")
         self.assertIn("Midrand", summary.body)
         self.assertNotIn("World lead", summary.body)
         self.assertNotIn("18.42", summary.body)
+        self.assertEqual(summary.bullets, [])
         self.assertFalse(summary.used_openai)
 
     @patch("daily_brief.tools.summary.post_json")

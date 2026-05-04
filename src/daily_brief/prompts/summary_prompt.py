@@ -11,7 +11,9 @@ Rules:
 - Do not repeat the exact values, prices, temperatures, or headlines that appear below.
 - Tease the shape of the day across weather, markets, world news, and AI/tech without giving everything away.
 - The body should feel like an editor setting the scene, not a summary table.
-- Bullets should be curiosity cues, not repeated facts.
+- Return an empty bullets array; the email layout does not show bullet cards.
+- Use vivid, human phrasing: a strong image, a little movement, and light wit.
+- Emojis are handled by the renderer, so do not include emojis in the JSON text.
 - Keep the headline under 9 words.
 - Keep the body to 2 sentences.
 - Return only JSON that matches the requested schema.

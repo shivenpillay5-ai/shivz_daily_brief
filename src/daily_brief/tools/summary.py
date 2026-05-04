@@ -138,45 +138,38 @@ def _story_fact(item: RankedItem) -> dict[str, str]:
 def _fallback_summary(facts: dict[str, object]) -> MorningSummary:
     weather = _first_dict(facts.get("weather"))
     markets = [_ensure_dict(item) for item in _ensure_list(facts.get("markets"))]
-    world = _first_dict(facts.get("world_news"))
-    ai_tech = _first_dict(facts.get("ai_tech_news"))
 
     location = str(weather.get("location", "your area"))
     weather_cue = _weather_teaser(weather)
-    market_cue = _market_teaser(markets)
-    world_source = str(world.get("source", "world news"))
-    ai_source = str(ai_tech.get("source", "AI/tech"))
+    market_cue = _market_teaser_short(markets)
 
     body = (
-        f"{location} sets the mood first, with {weather_cue} before the day starts making demands. "
-        f"Markets have a bit of movement, and the news mix has both global stakes and AI drama waiting below."
+        f"{location} opens the day with {weather_cue}; meanwhile {market_cue} "
+        "and the news desk has a few plot twists warming up below. Coffee first, scroll second, panic nowhere."
     )
-    bullets = [
-        f"Start with the sky over {location}; it sets the practical tone.",
-        market_cue,
-        f"The scan moves from {world_source} to {ai_source}, with the sharper edges saved for the links.",
-    ]
     return MorningSummary(
-        headline="The Day Has Entered The Chat",
+        headline="Your Morning, Lightly Stirred",
         body=body,
-        bullets=bullets,
+        bullets=[],
         used_openai=False,
     )
 
 
-def _market_teaser(markets: list[dict[str, object]]) -> str:
+def _market_teaser_short(markets: list[dict[str, object]]) -> str:
     if not markets:
-        return "Markets are still warming up in the background."
+        return "the market board is still waking up"
 
-    moving = [
-        str(quote.get("label", "market"))
+    movers = sum(
+        1
         for quote in markets
         if isinstance(quote.get("change_percent"), (int, float))
-    ]
-    if moving:
-        return f"Markets are awake enough to make {', '.join(moving[:2])} worth a glance."
+    )
+    if movers >= 3:
+        return "the market board is already flashing a few signals"
+    if movers:
+        return "the market board has started blinking"
 
-    return "Markets are on the board, with the detail tucked into the pulse below."
+    return "the market board is on standby"
 
 
 def _weather_teaser(weather: dict[str, object]) -> str:
