@@ -8,6 +8,7 @@ This is a small learning project that builds a daily email brief with:
 - a short morning summary written from the day's signals
 - top 5 world news links
 - top 5 AI and tech story links
+- a separate Daily Motivation and Bible Verse email
 
 The project is intentionally split into simple modules so you can learn how a practical agent is built:
 
@@ -17,7 +18,8 @@ The project is intentionally split into simple modules so you can learn how a pr
 4. Render the answer into text and HTML.
 5. Send it by email.
 6. Schedule it to run daily at 07:00.
-7. Alert you if the scheduled run fails after retries.
+7. Build a separate devotional email from a scripture prompt.
+8. Alert you if the scheduled run fails after retries.
 
 ## Project Map
 
@@ -37,12 +39,16 @@ daily-brief-agent/
       news.py      # reads RSS/Atom feeds
       ranking.py   # prompt-based ranking, with fallback ranking
       summary.py   # prompt-based morning summary, with fallback summary
+      devotional.py # scripture rotation and devotional reflection
       rendering.py # email text and HTML
+      devotional_rendering.py # devotional text, HTML, and WhatsApp rendering
       email.py     # SMTP sending
       alerts.py    # failure alert email
       whatsapp.py  # WhatsApp Cloud API sending
     prompts/
       ranking_prompt.py   # model instructions for selecting stories
+      summary_prompt.py   # model instructions for the morning summary
+      devotional_prompt.py # model instructions for the devotional reflection
   scripts/
     run_daily_brief.ps1
     register_windows_task.ps1
@@ -102,6 +108,24 @@ Force the non-OpenAI fallback ranking:
 daily-brief --no-openai
 ```
 
+Preview the Daily Motivation and Bible Verse email:
+
+```powershell
+daily-brief --devotional
+```
+
+Preview the devotional HTML:
+
+```powershell
+daily-brief --devotional --save-html devotional-preview.html
+```
+
+Send the devotional email:
+
+```powershell
+daily-brief --devotional --send
+```
+
 ## Scheduling At 07:00
 
 The scheduled task is the alarm clock. The agent is the Python workflow it wakes up.
@@ -123,11 +147,14 @@ Each scheduled run writes a log file into `logs/`.
 
 ## GitHub Actions Scheduling
 
-The GitHub workflow in `.github/workflows/daily-brief.yml` runs the brief from GitHub's cloud runner. That means your local machine does not need to be on.
+The GitHub workflows run from GitHub's cloud runners. That means your local machine does not need to be on.
 
-The scheduled workflow starts at 07:00 Africa/Johannesburg time. If sending fails, the workflow retries inside the same run:
+The news brief workflow in `.github/workflows/daily-brief.yml` starts at 07:00 Africa/Johannesburg time.
+The devotional workflow in `.github/workflows/daily-devotional.yml` starts at 07:10 Africa/Johannesburg time.
 
-- attempt 1 at about 07:00
+If sending fails, each workflow retries inside the same run:
+
+- attempt 1 at the scheduled time
 - attempt 2 after a 15 minute wait
 - attempt 3 after another 15 minute wait
 
@@ -148,13 +175,15 @@ If all three attempts fail, the app sends a failure alert email using the same S
 
 `src/daily_brief/prompts/summary_prompt.py` contains the morning-summary instruction. It gives the model the selected weather, market, world, and AI/tech facts and asks for a short reader-friendly summary without inventing details.
 
+`src/daily_brief/prompts/devotional_prompt.py` contains the devotional instruction. It gives the model one public-domain KJV verse and asks for a short practical reflection. If no OpenAI key is configured, the app uses the curated fallback reflection stored with the verse.
+
 That separation is important:
 
 - code gathers facts
 - the prompt makes judgment calls
 - rendering and email sending stay deterministic
 
-If `OPENAI_API_KEY` is not set, the app still runs with fallback ranking and a fallback morning summary.
+If `OPENAI_API_KEY` is not set, the app still runs with fallback ranking, a fallback morning summary, and fallback devotional reflections.
 
 ## Useful Environment Variables
 
@@ -176,6 +205,8 @@ SMTP_USERNAME=your_email@gmail.com
 SMTP_PASSWORD=your_app_password
 EMAIL_FROM=your_email@gmail.com
 EMAIL_TO=you@example.com
+EMAIL_SUBJECT_PREFIX=Shivz Daily Brief
+DEVOTIONAL_SUBJECT_PREFIX=Daily Motivation and Bible Verse
 
 WHATSAPP_ENABLED=true
 WHATSAPP_PHONE_NUMBER_ID=...

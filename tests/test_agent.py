@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from daily_brief.agent import Brief, DailyBriefAgent
+from daily_brief.agent import Brief, DevotionalBrief, DailyBriefAgent
 from daily_brief.config import (
     AppConfig,
     EmailConfig,
@@ -16,7 +16,9 @@ from daily_brief.models import (
     MarketQuote,
     MorningSummary,
     RankedItem,
+    ScriptureVerse,
     WeatherReport,
+    DevotionalContent,
 )
 
 
@@ -84,6 +86,29 @@ class AgentTests(unittest.TestCase):
         self.assertIn("https://example.com", brief.whatsapp_body)
         self.assertIn("USD/ZAR", brief.text_body)
         self.assertIn("Morning Signal", brief.html_body)
+
+    @patch("daily_brief.agent.build_daily_devotional")
+    def test_agent_builds_devotional_brief(self, build_daily_devotional_mock) -> None:
+        build_daily_devotional_mock.return_value = DevotionalContent(
+            title="Start With Gratitude",
+            verse=ScriptureVerse(
+                reference="Psalm 118:24",
+                text="This is the day which the LORD hath made; we will rejoice and be glad in it.",
+                translation="KJV",
+            ),
+            reflection="Start with gratitude before the day gets noisy.",
+        )
+
+        brief = DailyBriefAgent(_config()).build_devotional(
+            brief_date=__import__("datetime").datetime(2026, 5, 4),
+            use_openai=False,
+        )
+
+        self.assertIsInstance(brief, DevotionalBrief)
+        self.assertIn("Daily Motivation", brief.subject)
+        self.assertIn("Psalm 118:24", brief.text_body)
+        self.assertIn("Psalm 118:24", brief.html_body)
+        self.assertIn("Psalm 118:24", brief.whatsapp_body)
 
 
 def _config() -> AppConfig:

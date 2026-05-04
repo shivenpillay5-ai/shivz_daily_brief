@@ -54,6 +54,21 @@ class MorningSummary:
 
 
 @dataclass(frozen=True)
+class ScriptureVerse:
+    reference: str
+    text: str
+    translation: str
+
+
+@dataclass(frozen=True)
+class DevotionalContent:
+    title: str
+    verse: ScriptureVerse
+    reflection: str
+    used_openai: bool = False
+
+
+@dataclass(frozen=True)
 class FeedItem:
     title: str
     url: str

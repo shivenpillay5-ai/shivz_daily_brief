@@ -7,4 +7,5 @@ build/
 dist/
 *.egg-info/
 preview.html
+devotional-preview.html
 logs/

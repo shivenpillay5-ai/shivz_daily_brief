@@ -4,8 +4,14 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from daily_brief.config import AppConfig
-from daily_brief.models import MarketPulse, MorningSummary
+from daily_brief.models import DevotionalContent, MarketPulse, MorningSummary
 from daily_brief.tools.alerts import send_failure_alert as send_failure_alert_email
+from daily_brief.tools.devotional import build_daily_devotional
+from daily_brief.tools.devotional_rendering import (
+    render_devotional_html,
+    render_devotional_text,
+    render_devotional_whatsapp_text,
+)
 from daily_brief.tools.email import send_email
 from daily_brief.tools.market import fetch_market_pulse
 from daily_brief.tools.news import fetch_feed_items
@@ -24,6 +30,15 @@ class Brief:
     whatsapp_body: str
     morning_summary: MorningSummary
     warnings: list[str]
+
+
+@dataclass(frozen=True)
+class DevotionalBrief:
+    subject: str
+    text_body: str
+    html_body: str
+    whatsapp_body: str
+    devotional: DevotionalContent
 
 
 class DailyBriefAgent:
@@ -124,6 +139,26 @@ class DailyBriefAgent:
             warnings=warnings,
         )
 
+    def build_devotional(
+        self,
+        brief_date: datetime,
+        use_openai: bool = True,
+    ) -> DevotionalBrief:
+        print("Building daily devotional...")
+        devotional = build_daily_devotional(
+            brief_date=brief_date,
+            config=self.config,
+            use_openai=use_openai,
+        )
+        subject = f"{self.config.devotional_subject_prefix} - {brief_date:%Y-%m-%d}"
+        return DevotionalBrief(
+            subject=subject,
+            text_body=render_devotional_text(brief_date, devotional),
+            html_body=render_devotional_html(brief_date, devotional),
+            whatsapp_body=render_devotional_whatsapp_text(brief_date, devotional),
+            devotional=devotional,
+        )
+
     def send(self, brief: Brief) -> None:
         send_email(
             self.config.email,
@@ -135,6 +170,17 @@ class DailyBriefAgent:
     def send_whatsapp(self, brief: Brief) -> None:
         send_whatsapp_message(self.config.whatsapp, brief.whatsapp_body)
 
+    def send_devotional(self, brief: DevotionalBrief) -> None:
+        send_email(
+            self.config.email,
+            subject=brief.subject,
+            text_body=brief.text_body,
+            html_body=brief.html_body,
+        )
+
+    def send_devotional_whatsapp(self, brief: DevotionalBrief) -> None:
+        send_whatsapp_message(self.config.whatsapp, brief.whatsapp_body)
+
     def send_whatsapp_template(self) -> None:
         send_whatsapp_template(self.config.whatsapp)
 
@@ -143,10 +189,12 @@ class DailyBriefAgent:
         brief_date: datetime,
         log_text: str,
         run_url: str = "",
+        alert_name: str = "Shivz Daily Brief",
     ) -> None:
         send_failure_alert_email(
             self.config.email,
             brief_date=brief_date,
             log_text=log_text,
             run_url=run_url,
+            alert_name=alert_name,
         )

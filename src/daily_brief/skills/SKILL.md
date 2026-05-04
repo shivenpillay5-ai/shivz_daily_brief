@@ -2,7 +2,7 @@
 
 ## What This Skill Does
 
-Build and send the daily `Shivz Daily Brief`.
+Build and send the daily `Shivz Daily Brief` and the companion `Daily Motivation and Bible Verse` email.
 
 The brief includes:
 
@@ -14,6 +14,7 @@ The brief includes:
 - top AI and tech story links
 - a polished HTML email layout
 - an optional concise WhatsApp text version
+- a separate devotional email with a KJV scripture and short reflection
 
 ## When The Agent Should Use This Skill
 
@@ -22,6 +23,7 @@ Use this skill when the user wants to:
 - preview the daily brief
 - send the daily brief by email
 - send the daily brief by WhatsApp
+- preview or send the Daily Motivation and Bible Verse email
 - schedule the brief to run every morning
 - send a failure alert if the scheduled run fails
 - understand or adjust how the brief is created
@@ -47,6 +49,13 @@ The agent coordinates the workflow in this order:
 9. Send WhatsApp messages using the WhatsApp tool when `--send-whatsapp` is used.
 10. Send a failure alert using the alerts tool when `--send-failure-alert` is used.
 
+For `--devotional`, the agent uses a smaller workflow:
+
+1. Select the day's KJV scripture from the devotional tool.
+2. Write the reflection using the devotional prompt, or use the curated fallback reflection.
+3. Render text, HTML, and WhatsApp versions using the devotional rendering tool.
+4. Send through the same email or WhatsApp tools.
+
 ## Tools Used By This Skill
 
 The executable Python tools live in:
@@ -63,6 +72,8 @@ Tool files:
 - `ranking.py` ranks candidate stories.
 - `summary.py` writes a short morning summary from the selected facts.
 - `rendering.py` creates the plain-text and HTML email.
+- `devotional.py` selects the scripture and writes the devotional reflection.
+- `devotional_rendering.py` creates the devotional plain-text, HTML, and WhatsApp versions.
 - `email.py` sends the final email through SMTP.
 - `alerts.py` sends a concise failure alert with the failed run link and log tail.
 - `whatsapp.py` sends the concise text brief through the WhatsApp Cloud API.
@@ -79,6 +90,7 @@ When an OpenAI API key is configured, the ranking tool gives candidate stories t
 
 If no OpenAI key is configured, the ranking tool uses deterministic fallback logic.
 The summary tool follows the same pattern: use the model when `OPENAI_API_KEY` exists, otherwise write a deterministic fallback summary.
+The devotional tool also follows this pattern: use the model when available, otherwise use a curated KJV verse and fallback reflection.
 
 ## Important Constraints
 
@@ -91,3 +103,4 @@ The summary tool follows the same pattern: use the model when `OPENAI_API_KEY` e
 - Hide noisy feed warnings from the HTML email.
 - If one feed fails, continue building the brief from the remaining feeds.
 - If the scheduled GitHub run fails after retries, send one failure alert email.
+- Use public-domain KJV text for the devotional scripture unless a licensed Bible source is added later.

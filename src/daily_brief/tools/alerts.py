@@ -25,14 +25,15 @@ def send_failure_alert(
     brief_date: datetime,
     log_text: str,
     run_url: str = "",
+    alert_name: str = "Shivz Daily Brief",
 ) -> None:
-    subject = f"Shivz Daily Brief failed - {brief_date:%Y-%m-%d}"
+    subject = f"{alert_name} failed - {brief_date:%Y-%m-%d}"
     log_tail = _tail_log(log_text)
     send_email(
         config,
         subject=subject,
-        text_body=_render_text(brief_date, log_tail, run_url),
-        html_body=_render_html(brief_date, log_tail, run_url),
+        text_body=_render_text(alert_name, brief_date, log_tail, run_url),
+        html_body=_render_html(alert_name, brief_date, log_tail, run_url),
     )
 
 
@@ -45,9 +46,14 @@ def _tail_log(log_text: str) -> str:
     return "... log trimmed ...\n" + clean_log[-MAX_LOG_CHARS:]
 
 
-def _render_text(brief_date: datetime, log_tail: str, run_url: str) -> str:
+def _render_text(
+    alert_name: str,
+    brief_date: datetime,
+    log_tail: str,
+    run_url: str,
+) -> str:
     lines = [
-        "Shivz Daily Brief did not send successfully.",
+        f"{alert_name} did not send successfully.",
         "",
         f"Date: {brief_date:%A, %d %B %Y}",
         "What happened: GitHub Actions tried the morning run three times.",
@@ -59,7 +65,12 @@ def _render_text(brief_date: datetime, log_tail: str, run_url: str) -> str:
     return "\n".join(lines)
 
 
-def _render_html(brief_date: datetime, log_tail: str, run_url: str) -> str:
+def _render_html(
+    alert_name: str,
+    brief_date: datetime,
+    log_tail: str,
+    run_url: str,
+) -> str:
     run_link = ""
     if run_url:
         safe_url = escape(run_url, quote=True)
@@ -79,7 +90,7 @@ def _render_html(brief_date: datetime, log_tail: str, run_url: str) -> str:
           Daily brief alert
         </p>
         <h1 style="margin:0 0 10px;font-size:26px;line-height:1.2;">
-          Shivz Daily Brief did not send
+          {escape(alert_name)} did not send
         </h1>
         <p style="margin:0 0 16px;color:#42627d;">
           The scheduled run for {brief_date:%A, %d %B %Y} was tried three times and still failed.

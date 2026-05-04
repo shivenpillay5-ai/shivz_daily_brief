@@ -16,6 +16,11 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description="Build and send a daily email brief.")
     parser.add_argument("--env-file", type=Path, help="Optional path to a .env file.")
+    parser.add_argument(
+        "--devotional",
+        action="store_true",
+        help="Build the Daily Motivation and Bible Verse email instead of the news brief.",
+    )
     parser.add_argument("--send", action="store_true", help="Send email instead of previewing.")
     parser.add_argument(
         "--send-whatsapp",
@@ -41,6 +46,11 @@ def main() -> None:
         "--failure-run-url",
         default="",
         help="GitHub Actions run URL to include in the failure alert.",
+    )
+    parser.add_argument(
+        "--failure-alert-name",
+        default="Shivz Daily Brief",
+        help="Friendly name to use in the failure alert.",
     )
     parser.add_argument(
         "--save-html",
@@ -70,11 +80,47 @@ def main() -> None:
             brief_date=brief_date,
             log_text=read_failure_log(args.failure_log),
             run_url=args.failure_run_url,
+            alert_name=args.failure_alert_name,
         )
         print("Failure alert sent.")
         return
 
     use_openai = not args.no_openai
+
+    if args.devotional:
+        brief = agent.build_devotional(brief_date=brief_date, use_openai=use_openai)
+
+        if args.save_html:
+            args.save_html.write_text(brief.html_body, encoding="utf-8")
+            print(f"Saved devotional HTML preview to {args.save_html}")
+
+        if args.send:
+            print("Sending devotional email...")
+            agent.send_devotional(brief)
+            print("Devotional email sent.")
+
+        if args.send_whatsapp:
+            print("Sending devotional WhatsApp...")
+            agent.send_devotional_whatsapp(brief)
+            print("Devotional WhatsApp sent.")
+
+        if args.send or args.send_whatsapp:
+            return
+
+        print("")
+        print("=" * 72)
+        print(f"Devotional preview only. Subject: {brief.subject}")
+        print("=" * 72)
+        print(brief.text_body)
+        print("")
+        print("=" * 72)
+        print("WhatsApp devotional preview")
+        print("=" * 72)
+        print(brief.whatsapp_body)
+        print("")
+        print("Run with --devotional --send when you want to send it.")
+        return
+
     brief = agent.build(brief_date=brief_date, use_openai=use_openai)
 
     if args.save_html:

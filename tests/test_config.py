@@ -83,6 +83,18 @@ class ConfigTests(unittest.TestCase):
 
         self.assertFalse(config.market_pulse_enabled)
 
+    @patch.dict(
+        "os.environ",
+        {
+            "DEVOTIONAL_SUBJECT_PREFIX": "Morning Verse",
+        },
+        clear=True,
+    )
+    def test_devotional_subject_prefix_is_parsed(self) -> None:
+        config = load_config()
+
+        self.assertEqual(config.devotional_subject_prefix, "Morning Verse")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,77 @@
+name: Daily Motivation and Bible Verse
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "10 7 * * *"
+      timezone: "Africa/Johannesburg"
+
+jobs:
+  send-devotional:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_MODEL: gpt-5
+
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: "587"
+      SMTP_USE_TLS: "true"
+      SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+      EMAIL_TO: ${{ secrets.EMAIL_TO }}
+      DEVOTIONAL_SUBJECT_PREFIX: Daily Motivation and Bible Verse
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Run tests
+        run: python -m unittest discover -s tests
+
+      - name: Send devotional email with retries
+        shell: bash
+        run: |
+          set +e
+          : > daily-devotional-run.log
+
+          for attempt in 1 2 3; do
+            echo "::group::Daily devotional attempt ${attempt}" | tee -a daily-devotional-run.log
+            daily-brief --devotional --send 2>&1 | tee -a daily-devotional-run.log
+            status=${PIPESTATUS[0]}
+            echo "::endgroup::"
+
+            if [ "$status" -eq 0 ]; then
+              echo "Daily devotional sent on attempt ${attempt}." | tee -a daily-devotional-run.log
+              exit 0
+            fi
+
+            echo "Attempt ${attempt} failed with exit code ${status}." | tee -a daily-devotional-run.log
+            if [ "$attempt" -lt 3 ]; then
+              echo "Waiting 15 minutes before retry..." | tee -a daily-devotional-run.log
+              sleep 900
+            fi
+          done
+
+          exit 1
+
+      - name: Send failure alert
+        if: failure()
+        run: |
+          daily-brief --send-failure-alert \
+            --failure-alert-name "Daily Motivation and Bible Verse" \
+            --failure-log daily-devotional-run.log \
+            --failure-run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

@@ -78,6 +78,7 @@ class AppConfig:
     openai_model: str
     market_pulse_enabled: bool
     weather_locations: list[LocationConfig] = field(default_factory=list)
+    devotional_subject_prefix: str = "Daily Motivation and Bible Verse"
 
 
 def load_env_file(path: Path, override: bool = False) -> None:
@@ -141,6 +142,10 @@ def load_config(env_file: Path | None = None) -> AppConfig:
             _get("WEATHER_LOCATIONS", DEFAULT_WEATHER_LOCATIONS)
         )
         or [primary_location],
+        devotional_subject_prefix=_get(
+            "DEVOTIONAL_SUBJECT_PREFIX",
+            "Daily Motivation and Bible Verse",
+        ),
     )
 
 

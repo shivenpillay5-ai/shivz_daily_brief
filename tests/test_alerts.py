@@ -38,6 +38,18 @@ class FailureAlertTests(unittest.TestCase):
         self.assertIn("attempt 3 failed", kwargs["text_body"])
         self.assertIn("https://github.com/example/actions/runs/1", kwargs["html_body"])
 
+    @patch("daily_brief.tools.alerts.send_email")
+    def test_send_failure_alert_can_use_custom_alert_name(self, send_email_mock) -> None:
+        send_failure_alert(
+            _email_config(),
+            brief_date=datetime(2026, 5, 4),
+            log_text="failed",
+            alert_name="Daily Motivation and Bible Verse",
+        )
+
+        _, kwargs = send_email_mock.call_args
+        self.assertIn("Daily Motivation and Bible Verse failed", kwargs["subject"])
+
     def test_read_failure_log_handles_missing_path(self) -> None:
         self.assertIn("not found", read_failure_log(Path("does-not-exist.log")))
 
@@ -47,6 +59,18 @@ class FailureAlertTests(unittest.TestCase):
             log_path.write_text("failed here", encoding="utf-8")
 
             self.assertEqual(read_failure_log(log_path), "failed here")
+
+def _email_config() -> EmailConfig:
+    return EmailConfig(
+        smtp_host="smtp.example.com",
+        smtp_port=587,
+        smtp_use_tls=True,
+        smtp_username="sender@example.com",
+        smtp_password="secret",
+        email_from="sender@example.com",
+        email_to=["reader@example.com"],
+        subject_prefix="Shivz Daily Brief",
+    )
 
 
 if __name__ == "__main__":
