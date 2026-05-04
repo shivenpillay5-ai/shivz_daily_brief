@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from daily_brief.agent import DailyBriefAgent
 from daily_brief.config import load_config
+from daily_brief.tools.alerts import read_failure_log
 
 
 def main() -> None:
@@ -25,6 +26,21 @@ def main() -> None:
         "--send-whatsapp-template",
         action="store_true",
         help="Send Meta's hello_world WhatsApp template to test delivery.",
+    )
+    parser.add_argument(
+        "--send-failure-alert",
+        action="store_true",
+        help="Send an email alert that the scheduled brief failed.",
+    )
+    parser.add_argument(
+        "--failure-log",
+        type=Path,
+        help="Path to a captured failure log for the alert email.",
+    )
+    parser.add_argument(
+        "--failure-run-url",
+        default="",
+        help="GitHub Actions run URL to include in the failure alert.",
     )
     parser.add_argument(
         "--save-html",
@@ -46,6 +62,16 @@ def main() -> None:
         print("Sending WhatsApp template...")
         agent.send_whatsapp_template()
         print("WhatsApp template sent.")
+        return
+
+    if args.send_failure_alert:
+        print("Sending failure alert...")
+        agent.send_failure_alert(
+            brief_date=brief_date,
+            log_text=read_failure_log(args.failure_log),
+            run_url=args.failure_run_url,
+        )
+        print("Failure alert sent.")
         return
 
     use_openai = not args.no_openai

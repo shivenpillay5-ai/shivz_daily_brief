@@ -9,7 +9,7 @@ on:
 jobs:
   send-brief:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 60
 
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -56,5 +56,35 @@ jobs:
       - name: Run tests
         run: python -m unittest discover -s tests
 
-      - name: Send email brief
-        run: daily-brief --send
+      - name: Send email brief with retries
+        shell: bash
+        run: |
+          set +e
+          : > daily-brief-run.log
+
+          for attempt in 1 2 3; do
+            echo "::group::Daily brief attempt ${attempt}" | tee -a daily-brief-run.log
+            daily-brief --send 2>&1 | tee -a daily-brief-run.log
+            status=${PIPESTATUS[0]}
+            echo "::endgroup::"
+
+            if [ "$status" -eq 0 ]; then
+              echo "Daily brief sent on attempt ${attempt}." | tee -a daily-brief-run.log
+              exit 0
+            fi
+
+            echo "Attempt ${attempt} failed with exit code ${status}." | tee -a daily-brief-run.log
+            if [ "$attempt" -lt 3 ]; then
+              echo "Waiting 15 minutes before retry..." | tee -a daily-brief-run.log
+              sleep 900
+            fi
+          done
+
+          exit 1
+
+      - name: Send failure alert
+        if: failure()
+        run: |
+          daily-brief --send-failure-alert \
+            --failure-log daily-brief-run.log \
+            --failure-run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

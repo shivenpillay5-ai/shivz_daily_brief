@@ -5,6 +5,7 @@ from datetime import datetime
 
 from daily_brief.config import AppConfig
 from daily_brief.models import MarketPulse, MorningSummary
+from daily_brief.tools.alerts import send_failure_alert as send_failure_alert_email
 from daily_brief.tools.email import send_email
 from daily_brief.tools.market import fetch_market_pulse
 from daily_brief.tools.news import fetch_feed_items
@@ -136,3 +137,16 @@ class DailyBriefAgent:
 
     def send_whatsapp_template(self) -> None:
         send_whatsapp_template(self.config.whatsapp)
+
+    def send_failure_alert(
+        self,
+        brief_date: datetime,
+        log_text: str,
+        run_url: str = "",
+    ) -> None:
+        send_failure_alert_email(
+            self.config.email,
+            brief_date=brief_date,
+            log_text=log_text,
+            run_url=run_url,
+        )

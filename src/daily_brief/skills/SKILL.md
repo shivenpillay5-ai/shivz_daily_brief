@@ -23,6 +23,7 @@ Use this skill when the user wants to:
 - send the daily brief by email
 - send the daily brief by WhatsApp
 - schedule the brief to run every morning
+- send a failure alert if the scheduled run fails
 - understand or adjust how the brief is created
 
 ## How The Agent Runs The Skill
@@ -44,6 +45,7 @@ The agent coordinates the workflow in this order:
 7. Render the text, HTML email, and WhatsApp message using the rendering tool.
 8. Send the email using the email tool when `--send` is used.
 9. Send WhatsApp messages using the WhatsApp tool when `--send-whatsapp` is used.
+10. Send a failure alert using the alerts tool when `--send-failure-alert` is used.
 
 ## Tools Used By This Skill
 
@@ -62,6 +64,7 @@ Tool files:
 - `summary.py` writes a short morning summary from the selected facts.
 - `rendering.py` creates the plain-text and HTML email.
 - `email.py` sends the final email through SMTP.
+- `alerts.py` sends a concise failure alert with the failed run link and log tail.
 - `whatsapp.py` sends the concise text brief through the WhatsApp Cloud API.
 
 ## Prompt Used By This Skill
@@ -87,3 +90,4 @@ The summary tool follows the same pattern: use the model when `OPENAI_API_KEY` e
 - Keep Midrand hourly detail in email, but summarize it in WhatsApp.
 - Hide noisy feed warnings from the HTML email.
 - If one feed fails, continue building the brief from the remaining feeds.
+- If the scheduled GitHub run fails after retries, send one failure alert email.

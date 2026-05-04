@@ -5,7 +5,7 @@ This is a small learning project that builds a daily email brief with:
 - Midrand hourly weather for the next few hours
 - weather snapshots for Johannesburg, Cape Town, and Durban
 - a market pulse with USD/ZAR, GBP/ZAR, gold, silver, and Brent crude
-- a short morning summary written from the day’s signals
+- a short morning summary written from the day's signals
 - top 5 world news links
 - top 5 AI and tech story links
 
@@ -17,6 +17,7 @@ The project is intentionally split into simple modules so you can learn how a pr
 4. Render the answer into text and HTML.
 5. Send it by email.
 6. Schedule it to run daily at 07:00.
+7. Alert you if the scheduled run fails after retries.
 
 ## Project Map
 
@@ -38,6 +39,7 @@ daily-brief-agent/
       summary.py   # prompt-based morning summary, with fallback summary
       rendering.py # email text and HTML
       email.py     # SMTP sending
+      alerts.py    # failure alert email
       whatsapp.py  # WhatsApp Cloud API sending
     prompts/
       ranking_prompt.py   # model instructions for selecting stories
@@ -118,6 +120,18 @@ Then register the 07:00 task:
 
 That registers a Windows Scheduled Task named `DailyBriefAgent` to run every day at 07:00.
 Each scheduled run writes a log file into `logs/`.
+
+## GitHub Actions Scheduling
+
+The GitHub workflow in `.github/workflows/daily-brief.yml` runs the brief from GitHub's cloud runner. That means your local machine does not need to be on.
+
+The scheduled workflow starts at 07:00 Africa/Johannesburg time. If sending fails, the workflow retries inside the same run:
+
+- attempt 1 at about 07:00
+- attempt 2 after a 15 minute wait
+- attempt 3 after another 15 minute wait
+
+If all three attempts fail, the app sends a failure alert email using the same SMTP settings. The alert includes a link to the failed GitHub Actions run and the latest captured log output.
 
 ## How The Prompt Fits In
 
