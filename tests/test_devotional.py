@@ -26,6 +26,7 @@ class DevotionalTests(unittest.TestCase):
         self.assertEqual(content.verse.translation, "KJV")
         self.assertTrue(content.verse.reference)
         self.assertTrue(content.reflection)
+        self.assertTrue(content.motivation)
         self.assertFalse(content.used_openai)
 
     def test_select_daily_verse_is_repeatable_for_same_date(self) -> None:
@@ -40,6 +41,7 @@ class DevotionalTests(unittest.TestCase):
                 {
                     "title": "Grace For Today",
                     "reflection": "A warm reflection about receiving the day with faith.",
+                    "motivation": "Take the next step with a clear mind and steady hands.",
                 }
             )
         }
@@ -51,6 +53,10 @@ class DevotionalTests(unittest.TestCase):
         )
 
         self.assertEqual(content.title, "Grace For Today")
+        self.assertEqual(
+            content.motivation,
+            "Take the next step with a clear mind and steady hands.",
+        )
         self.assertTrue(content.used_openai)
         self.assertEqual(post_json_mock.call_count, 1)
 

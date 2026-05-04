@@ -18,6 +18,7 @@ class DevotionalRenderingTests(unittest.TestCase):
         self.assertIn("Psalm 118:24", text)
         self.assertIn("This is the day", text)
         self.assertIn("Start with gratitude", text)
+        self.assertIn("Start the day", text)
 
     def test_render_devotional_html_escapes_content(self) -> None:
         html = render_devotional_html(datetime(2026, 5, 4), _devotional())
@@ -25,6 +26,7 @@ class DevotionalRenderingTests(unittest.TestCase):
         self.assertIn("Daily Motivation and Bible Verse", html)
         self.assertIn("Psalm 118:24", html)
         self.assertIn("&ldquo;This is the day", html)
+        self.assertIn("Start the day", html)
 
     def test_render_devotional_whatsapp_is_compact(self) -> None:
         whatsapp = render_devotional_whatsapp_text(
@@ -33,6 +35,7 @@ class DevotionalRenderingTests(unittest.TestCase):
         )
 
         self.assertIn("*Daily Motivation and Bible Verse*", whatsapp)
+        self.assertIn("Start the day", whatsapp)
         self.assertLess(len(whatsapp), 1800)
 
 
@@ -45,6 +48,7 @@ def _devotional() -> DevotionalContent:
             translation="KJV",
         ),
         reflection="Start with gratitude before the day gets noisy.",
+        motivation="Take one steady step and let the day build from there.",
     )
 
 

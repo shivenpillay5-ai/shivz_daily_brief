@@ -175,7 +175,7 @@ If all three attempts fail, the app sends a failure alert email using the same S
 
 `src/daily_brief/prompts/summary_prompt.py` contains the morning-summary instruction. It gives the model the selected weather, market, world, and AI/tech facts and asks for a short reader-friendly summary without inventing details.
 
-`src/daily_brief/prompts/devotional_prompt.py` contains the devotional instruction. It gives the model one public-domain KJV verse and asks for a short practical reflection. If no OpenAI key is configured, the app uses the curated fallback reflection stored with the verse.
+`src/daily_brief/prompts/devotional_prompt.py` contains the devotional instruction. It gives the model one public-domain KJV verse and asks for a short practical reflection plus a broader motivational closing. If no OpenAI key is configured, the app uses the curated fallback reflection and motivational closing.
 
 That separation is important:
 
@@ -183,7 +183,7 @@ That separation is important:
 - the prompt makes judgment calls
 - rendering and email sending stay deterministic
 
-If `OPENAI_API_KEY` is not set, the app still runs with fallback ranking, a fallback morning summary, and fallback devotional reflections.
+If `OPENAI_API_KEY` is not set, the app still runs with fallback ranking, a fallback morning summary, and fallback devotional reflections and motivation.
 
 ## Useful Environment Variables
 

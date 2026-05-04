@@ -65,6 +65,7 @@ class DevotionalContent:
     title: str
     verse: ScriptureVerse
     reflection: str
+    motivation: str = ""
     used_openai: bool = False
 
 

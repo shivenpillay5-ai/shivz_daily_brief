@@ -26,6 +26,9 @@ def render_devotional_text(
             "",
             "What it means today:",
             devotional.reflection,
+            "",
+            "Start the day:",
+            devotional.motivation,
         ]
     )
 
@@ -83,6 +86,8 @@ def render_devotional_html(
                   {html.escape(devotional.reflection)}
                 </p>
 
+                {_motivation_html(devotional)}
+
                 <p style="margin:30px 0 0;color:#87958f;font-size:12px;text-align:center">
                   Built by your Shivz Daily Brief Agent.
                 </p>
@@ -111,6 +116,8 @@ def render_devotional_whatsapp_text(
                 f'"{devotional.verse.text}"',
                 "",
                 f"Thought: {devotional.reflection}",
+                "",
+                f"Start the day: {devotional.motivation}",
             ]
         )
     )
@@ -120,3 +127,24 @@ def _clip_message(value: str, max_chars: int = 1800) -> str:
     if len(value) <= max_chars:
         return value
     return value[: max_chars - 30].rstrip() + "\n\n...trimmed for WhatsApp"
+
+
+def _motivation_html(devotional: DevotionalContent) -> str:
+    if not devotional.motivation:
+        return ""
+
+    return f"""
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:26px;border:1px solid #d7e8df;border-radius:18px;background:#f1faf5">
+                  <tr>
+                    <td valign="top" style="width:56px;padding:18px 0 18px 18px">
+                      <div style="width:42px;height:42px;border-radius:14px;background:#31504a;color:#ffffff;text-align:center;line-height:42px;font-size:23px">+</div>
+                    </td>
+                    <td style="padding:18px 20px 18px 12px">
+                      <div style="font-size:12px;color:#31504a;font-weight:850;text-transform:uppercase;letter-spacing:.8px">Start the day</div>
+                      <p style="font-size:16px;line-height:1.58;margin:6px 0 0;color:#334e48">
+                        {html.escape(devotional.motivation)}
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+    """

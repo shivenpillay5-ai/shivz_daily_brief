@@ -26,6 +26,17 @@ class VerseSeed:
 
 KJV = "KJV"
 
+MOTIVATIONAL_CLOSERS: tuple[str, ...] = (
+    "Step into today with a clear head and a willing heart. You do not need to solve the whole week before breakfast; just take the next honest step and give it your best attention.",
+    "Let today be built one good decision at a time. Start where you are, use what you have, and keep moving with quiet confidence.",
+    "Your pace does not have to impress anyone to be meaningful. Focus on showing up well, doing the next right thing, and leaving the day a little better than you found it.",
+    "Carry yourself like someone who still has room to grow and plenty to give. A steady attitude, a kind word, and one disciplined action can shift the whole tone of the day.",
+    "Do not wait for perfect energy before you begin. Begin with what you have, protect your focus, and let momentum meet you on the road.",
+    "Today does not need panic to become productive. Choose calm effort, clean priorities, and the courage to finish one important thing well.",
+    "Let your first win be presence. Be where you are, listen properly, work honestly, and trust that small faithful actions add up.",
+    "You are allowed to start small and still start strong. A focused morning, a generous spirit, and one brave step can make the day feel possible.",
+)
+
 VERSE_ROTATION: tuple[VerseSeed, ...] = (
     VerseSeed(
         reference="Psalm 118:24",
@@ -262,8 +273,9 @@ def _write_with_openai(
                     "properties": {
                         "title": {"type": "string"},
                         "reflection": {"type": "string"},
+                        "motivation": {"type": "string"},
                     },
-                    "required": ["title", "reflection"],
+                    "required": ["title", "reflection", "motivation"],
                 },
             }
         },
@@ -276,10 +288,12 @@ def _write_with_openai(
     data = json.loads(_extract_output_text(response))
     title = str(data.get("title", "")).strip() or seed.title
     reflection = str(data.get("reflection", "")).strip() or seed.reflection
+    motivation = str(data.get("motivation", "")).strip() or _daily_motivation(verse)
     return DevotionalContent(
         title=title,
         verse=verse,
         reflection=reflection,
+        motivation=motivation,
         used_openai=True,
     )
 
@@ -292,8 +306,16 @@ def _fallback_devotional(
         title=seed.title,
         verse=verse,
         reflection=seed.reflection,
+        motivation=_daily_motivation(verse),
         used_openai=False,
     )
+
+
+def _daily_motivation(verse: ScriptureVerse) -> str:
+    index = sum(ord(character) for character in verse.reference) % len(
+        MOTIVATIONAL_CLOSERS
+    )
+    return MOTIVATIONAL_CLOSERS[index]
 
 
 def _extract_output_text(response: dict[str, object]) -> str:

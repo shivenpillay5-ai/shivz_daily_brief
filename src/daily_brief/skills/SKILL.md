@@ -14,7 +14,7 @@ The brief includes:
 - top AI and tech story links
 - a polished HTML email layout
 - an optional concise WhatsApp text version
-- a separate devotional email with a KJV scripture and short reflection
+- a separate devotional email with a KJV scripture, short reflection, and motivational closing
 
 ## When The Agent Should Use This Skill
 
@@ -52,7 +52,7 @@ The agent coordinates the workflow in this order:
 For `--devotional`, the agent uses a smaller workflow:
 
 1. Select the day's KJV scripture from the devotional tool.
-2. Write the reflection using the devotional prompt, or use the curated fallback reflection.
+2. Write the reflection and motivational closing using the devotional prompt, or use curated fallbacks.
 3. Render text, HTML, and WhatsApp versions using the devotional rendering tool.
 4. Send through the same email or WhatsApp tools.
 
@@ -72,7 +72,7 @@ Tool files:
 - `ranking.py` ranks candidate stories.
 - `summary.py` writes a short morning summary from the selected facts.
 - `rendering.py` creates the plain-text and HTML email.
-- `devotional.py` selects the scripture and writes the devotional reflection.
+- `devotional.py` selects the scripture and writes the devotional reflection and motivation.
 - `devotional_rendering.py` creates the devotional plain-text, HTML, and WhatsApp versions.
 - `email.py` sends the final email through SMTP.
 - `alerts.py` sends a concise failure alert with the failed run link and log tail.
@@ -90,7 +90,7 @@ When an OpenAI API key is configured, the ranking tool gives candidate stories t
 
 If no OpenAI key is configured, the ranking tool uses deterministic fallback logic.
 The summary tool follows the same pattern: use the model when `OPENAI_API_KEY` exists, otherwise write a deterministic fallback summary.
-The devotional tool also follows this pattern: use the model when available, otherwise use a curated KJV verse and fallback reflection.
+The devotional tool also follows this pattern: use the model when available, otherwise use a curated KJV verse, fallback reflection, and motivational closing.
 
 ## Important Constraints
 
