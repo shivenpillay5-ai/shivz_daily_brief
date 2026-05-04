@@ -7,6 +7,7 @@ from daily_brief.models import (
     HourlyForecast,
     MarketPulse,
     MarketQuote,
+    MorningSummary,
     RankedItem,
     WeatherReport,
 )
@@ -158,6 +159,21 @@ class RendererTests(unittest.TestCase):
         self.assertIn("Gold", body)
         self.assertIn("🥇", body)
 
+    def test_render_html_includes_morning_summary(self) -> None:
+        weather = _weather("Midrand")
+
+        body = render_html(
+            brief_date=datetime(2026, 5, 4),
+            weather_reports=[weather],
+            world_items=[],
+            ai_tech_items=[],
+            morning_summary=_morning_summary(),
+        )
+
+        self.assertIn("Morning read", body)
+        self.assertIn("Morning Signal", body)
+        self.assertIn("A useful morning read.", body)
+
     def test_render_whatsapp_text_includes_weather_and_links(self) -> None:
         weather = _weather("Midrand")
         item = RankedItem(
@@ -197,10 +213,12 @@ class RendererTests(unittest.TestCase):
             weather_reports=[weather],
             world_items=[],
             ai_tech_items=[],
+            morning_summary=_morning_summary(),
             market_pulse=_market_pulse(),
         )
 
         self.assertIn("Market Pulse", body)
+        self.assertIn("Morning Signal", body)
         self.assertIn("USD/ZAR R18.42 ↑ 0.4%", body)
         self.assertNotIn("Next few hours", body)
         self.assertNotIn("07:00", body)
@@ -250,6 +268,14 @@ def _market_pulse() -> MarketPulse:
                 change_percent=0.4,
             ),
         ]
+    )
+
+
+def _morning_summary() -> MorningSummary:
+    return MorningSummary(
+        headline="Morning Signal",
+        body="A useful morning read.",
+        bullets=["Weather is calm.", "Markets are awake."],
     )
 
 

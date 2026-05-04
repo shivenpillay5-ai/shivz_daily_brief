@@ -4,12 +4,13 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from daily_brief.config import AppConfig
-from daily_brief.models import MarketPulse
+from daily_brief.models import MarketPulse, MorningSummary
 from daily_brief.tools.email import send_email
 from daily_brief.tools.market import fetch_market_pulse
 from daily_brief.tools.news import fetch_feed_items
 from daily_brief.tools.ranking import rank_items
 from daily_brief.tools.rendering import render_html, render_text, render_whatsapp_text
+from daily_brief.tools.summary import write_morning_summary
 from daily_brief.tools.weather import fetch_weather
 from daily_brief.tools.whatsapp import send_whatsapp_message, send_whatsapp_template
 
@@ -20,6 +21,7 @@ class Brief:
     text_body: str
     html_body: str
     whatsapp_body: str
+    morning_summary: MorningSummary
     warnings: list[str]
 
 
@@ -70,12 +72,24 @@ class DailyBriefAgent:
             use_openai=use_openai,
         )
 
+        print("Writing morning summary...")
+        morning_summary = write_morning_summary(
+            brief_date=brief_date,
+            weather_reports=weather_reports,
+            market_pulse=market_pulse,
+            world_items=world_ranked,
+            ai_tech_items=ai_tech_ranked,
+            config=self.config,
+            use_openai=use_openai,
+        )
+
         warnings = world_warnings + ai_tech_warnings
         if market_pulse:
             warnings += market_pulse.warnings
         text_body = render_text(
             brief_date=brief_date,
             weather_reports=weather_reports,
+            morning_summary=morning_summary,
             market_pulse=market_pulse,
             world_items=world_ranked,
             ai_tech_items=ai_tech_ranked,
@@ -84,6 +98,7 @@ class DailyBriefAgent:
         html_body = render_html(
             brief_date=brief_date,
             weather_reports=weather_reports,
+            morning_summary=morning_summary,
             market_pulse=market_pulse,
             world_items=world_ranked,
             ai_tech_items=ai_tech_ranked,
@@ -92,6 +107,7 @@ class DailyBriefAgent:
         whatsapp_body = render_whatsapp_text(
             brief_date=brief_date,
             weather_reports=weather_reports,
+            morning_summary=morning_summary,
             market_pulse=market_pulse,
             world_items=world_ranked,
             ai_tech_items=ai_tech_ranked,
@@ -103,6 +119,7 @@ class DailyBriefAgent:
             text_body=text_body,
             html_body=html_body,
             whatsapp_body=whatsapp_body,
+            morning_summary=morning_summary,
             warnings=warnings,
         )
 

@@ -57,4 +57,4 @@ jobs:
         run: python -m unittest discover -s tests
 
       - name: Send email brief
-        run: daily-brief --send --no-openai
+        run: daily-brief --send

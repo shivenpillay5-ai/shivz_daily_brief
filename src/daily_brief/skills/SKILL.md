@@ -9,6 +9,7 @@ The brief includes:
 - Midrand hourly weather for the next few hours
 - Johannesburg, Cape Town, and Durban weather snapshots
 - a market pulse with USD/ZAR, GBP/ZAR, gold, silver, and Brent crude
+- a concise morning summary written from the collected facts
 - top world news links
 - top AI and tech story links
 - a polished HTML email layout
@@ -39,9 +40,10 @@ The agent coordinates the workflow in this order:
 3. Fetch market data using the market tool.
 4. Fetch world news and AI/tech news using the news tool.
 5. Rank stories using the ranking tool.
-6. Render the text, HTML email, and WhatsApp message using the rendering tool.
-7. Send the email using the email tool when `--send` is used.
-8. Send WhatsApp messages using the WhatsApp tool when `--send-whatsapp` is used.
+6. Write the morning summary using the summary tool.
+7. Render the text, HTML email, and WhatsApp message using the rendering tool.
+8. Send the email using the email tool when `--send` is used.
+9. Send WhatsApp messages using the WhatsApp tool when `--send-whatsapp` is used.
 
 ## Tools Used By This Skill
 
@@ -57,6 +59,7 @@ Tool files:
 - `market.py` fetches exchange rates and commodity futures for the market pulse.
 - `news.py` reads RSS and Atom feeds.
 - `ranking.py` ranks candidate stories.
+- `summary.py` writes a short morning summary from the selected facts.
 - `rendering.py` creates the plain-text and HTML email.
 - `email.py` sends the final email through SMTP.
 - `whatsapp.py` sends the concise text brief through the WhatsApp Cloud API.
@@ -72,6 +75,7 @@ src/daily_brief/prompts/ranking_prompt.py
 When an OpenAI API key is configured, the ranking tool gives candidate stories to that prompt and asks the model to select the best stories.
 
 If no OpenAI key is configured, the ranking tool uses deterministic fallback logic.
+The summary tool follows the same pattern: use the model when `OPENAI_API_KEY` exists, otherwise write a deterministic fallback summary.
 
 ## Important Constraints
 

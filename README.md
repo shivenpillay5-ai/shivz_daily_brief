@@ -5,6 +5,7 @@ This is a small learning project that builds a daily email brief with:
 - Midrand hourly weather for the next few hours
 - weather snapshots for Johannesburg, Cape Town, and Durban
 - a market pulse with USD/ZAR, GBP/ZAR, gold, silver, and Brent crude
+- a short morning summary written from the day’s signals
 - top 5 world news links
 - top 5 AI and tech story links
 
@@ -12,9 +13,10 @@ The project is intentionally split into simple modules so you can learn how a pr
 
 1. Collect raw context from APIs and RSS feeds.
 2. Pass the candidate stories through a ranking prompt.
-3. Render the answer into text and HTML.
-4. Send it by email.
-5. Schedule it to run daily at 07:00.
+3. Write a concise morning summary from the selected facts.
+4. Render the answer into text and HTML.
+5. Send it by email.
+6. Schedule it to run daily at 07:00.
 
 ## Project Map
 
@@ -33,6 +35,7 @@ daily-brief-agent/
       market.py    # fetches FX and commodity market data
       news.py      # reads RSS/Atom feeds
       ranking.py   # prompt-based ranking, with fallback ranking
+      summary.py   # prompt-based morning summary, with fallback summary
       rendering.py # email text and HTML
       email.py     # SMTP sending
       whatsapp.py  # WhatsApp Cloud API sending
@@ -129,13 +132,15 @@ Each scheduled run writes a log file into `logs/`.
 
 `src/daily_brief/prompts/ranking_prompt.py` contains the core model instruction. The program gives the model candidate stories that already include titles, links, sources, and summaries. The prompt tells the model to pick exactly the best 5 without inventing URLs.
 
+`src/daily_brief/prompts/summary_prompt.py` contains the morning-summary instruction. It gives the model the selected weather, market, world, and AI/tech facts and asks for a short reader-friendly summary without inventing details.
+
 That separation is important:
 
 - code gathers facts
 - the prompt makes judgment calls
 - rendering and email sending stay deterministic
 
-If `OPENAI_API_KEY` is not set, the app still runs with a simple fallback ranking based mostly on freshness and deduplication.
+If `OPENAI_API_KEY` is not set, the app still runs with fallback ranking and a fallback morning summary.
 
 ## Useful Environment Variables
 

@@ -11,7 +11,13 @@ from daily_brief.config import (
     LocationConfig,
     WhatsAppConfig,
 )
-from daily_brief.models import MarketPulse, MarketQuote, RankedItem, WeatherReport
+from daily_brief.models import (
+    MarketPulse,
+    MarketQuote,
+    MorningSummary,
+    RankedItem,
+    WeatherReport,
+)
 
 
 class AgentTests(unittest.TestCase):
@@ -19,8 +25,10 @@ class AgentTests(unittest.TestCase):
     @patch("daily_brief.agent.fetch_market_pulse")
     @patch("daily_brief.agent.fetch_feed_items")
     @patch("daily_brief.agent.rank_items")
+    @patch("daily_brief.agent.write_morning_summary")
     def test_agent_builds_brief(
         self,
+        write_morning_summary_mock,
         rank_items_mock,
         fetch_feed_items_mock,
         fetch_market_pulse_mock,
@@ -49,6 +57,11 @@ class AgentTests(unittest.TestCase):
                 )
             ]
         )
+        write_morning_summary_mock.return_value = MorningSummary(
+            headline="Morning Signal",
+            body="A useful morning read.",
+            bullets=["Weather is calm."],
+        )
         fetch_feed_items_mock.return_value = ([], [])
         rank_items_mock.return_value = [
             RankedItem(
@@ -70,6 +83,7 @@ class AgentTests(unittest.TestCase):
         self.assertIn("https://example.com", brief.html_body)
         self.assertIn("https://example.com", brief.whatsapp_body)
         self.assertIn("USD/ZAR", brief.text_body)
+        self.assertIn("Morning Signal", brief.html_body)
 
 
 def _config() -> AppConfig:

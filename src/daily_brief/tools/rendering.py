@@ -9,6 +9,7 @@ from daily_brief.models import (
     HourlyForecast,
     MarketPulse,
     MarketQuote,
+    MorningSummary,
     RankedItem,
     WeatherReport,
 )
@@ -23,11 +24,14 @@ def render_text(
     weather_reports: list[WeatherReport],
     world_items: list[RankedItem],
     ai_tech_items: list[RankedItem],
+    morning_summary: MorningSummary | None = None,
     market_pulse: MarketPulse | None = None,
     warnings: list[str] | None = None,
 ) -> str:
     lines = [
         f"☕ {BRIEF_NAME} - {brief_date:%A, %d %B %Y}",
+        "",
+        *_summary_lines(morning_summary),
         "",
         "🌦 Weather",
         *_weather_lines(weather_reports),
@@ -64,6 +68,7 @@ def render_html(
     weather_reports: list[WeatherReport],
     world_items: list[RankedItem],
     ai_tech_items: list[RankedItem],
+    morning_summary: MorningSummary | None = None,
     market_pulse: MarketPulse | None = None,
     warnings: list[str] | None = None,
 ) -> str:
@@ -108,6 +113,8 @@ def render_html(
             </tr>
             <tr>
               <td style="padding:28px 34px 12px">
+                {_summary_section_html(morning_summary)}
+                {_divider_html()}
                 {_weather_section_html(weather_reports)}
                 {_divider_html()}
                 {_market_section_html(market_pulse)}
@@ -133,12 +140,14 @@ def render_whatsapp_text(
     weather_reports: list[WeatherReport],
     world_items: list[RankedItem],
     ai_tech_items: list[RankedItem],
+    morning_summary: MorningSummary | None = None,
     market_pulse: MarketPulse | None = None,
 ) -> str:
     lines = [
         f"☕ *{BRIEF_NAME}*",
         f"{brief_date:%A, %d %B %Y}",
         "",
+        *_whatsapp_summary_lines(morning_summary),
         "🌦 *Weather*",
         *_whatsapp_weather_lines(weather_reports),
         "",
@@ -152,6 +161,72 @@ def render_whatsapp_text(
         "Full pretty version is in your email inbox.",
     ]
     return _clip_message("\n".join(lines))
+
+
+def _summary_lines(morning_summary: MorningSummary | None) -> list[str]:
+    if morning_summary is None:
+        return []
+
+    lines = [
+        "🧭 Morning Summary",
+        morning_summary.headline,
+        morning_summary.body,
+    ]
+    if morning_summary.bullets:
+        lines.append("")
+        lines.extend(f"- {bullet}" for bullet in morning_summary.bullets[:3])
+    return lines
+
+
+def _whatsapp_summary_lines(
+    morning_summary: MorningSummary | None,
+) -> list[str]:
+    if morning_summary is None:
+        return []
+
+    return [
+        f"🧭 *{morning_summary.headline}*",
+        _shorten(morning_summary.body, max_chars=260),
+        "",
+    ]
+
+
+def _summary_section_html(morning_summary: MorningSummary | None) -> str:
+    if morning_summary is None:
+        return ""
+
+    bullets_html = ""
+    if morning_summary.bullets:
+        bullets_html = "".join(
+            f"""
+            <td valign="top" style="width:33.3%;padding:6px 8px 0 0">
+              <div style="background:#ffffff;border:1px solid #d9e2ec;border-radius:14px;padding:12px;color:#334e68;font-size:13px;line-height:1.45">
+                {html.escape(bullet)}
+              </div>
+            </td>
+            """
+            for bullet in morning_summary.bullets[:3]
+        )
+        bullets_html = f"""
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:12px">
+          <tr>{bullets_html}</tr>
+        </table>
+        """
+
+    return f"""
+    <div style="margin-bottom:28px">
+      <div style="font-size:13px;color:#4f6f7d;font-weight:700;text-transform:uppercase;letter-spacing:.8px">🧭 Morning read</div>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:8px;border-radius:18px;background:#f3fbfd;border:1px solid #cce8f0">
+        <tr>
+          <td style="padding:22px">
+            <h2 style="font-size:25px;line-height:1.2;margin:0 0 8px;color:#102a43">{html.escape(morning_summary.headline)}</h2>
+            <p style="font-size:15px;line-height:1.55;margin:0;color:#334e68">{html.escape(morning_summary.body)}</p>
+            {bullets_html}
+          </td>
+        </tr>
+      </table>
+    </div>
+    """
 
 
 def _story_lines(items: list[RankedItem]) -> list[str]:

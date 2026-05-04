@@ -46,6 +46,14 @@ class MarketPulse:
 
 
 @dataclass(frozen=True)
+class MorningSummary:
+    headline: str
+    body: str
+    bullets: list[str] = field(default_factory=list)
+    used_openai: bool = False
+
+
+@dataclass(frozen=True)
 class FeedItem:
     title: str
     url: str
