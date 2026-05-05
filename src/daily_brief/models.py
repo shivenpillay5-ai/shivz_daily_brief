@@ -70,6 +70,49 @@ class DevotionalContent:
 
 
 @dataclass(frozen=True)
+class MealIdea:
+    title: str
+    description: str
+    ingredients: list[str]
+    steps: list[str]
+    prep_note: str
+    image_url: str
+    image_alt: str
+    image_credit: str
+    image_credit_url: str
+
+
+@dataclass(frozen=True)
+class MarriageSpark:
+    title: str
+    motivation: str
+    fun_idea: str
+    conversation_starter: str
+
+
+@dataclass(frozen=True)
+class CalendarEvent:
+    calendar_id: str
+    calendar_name: str
+    title: str
+    start: datetime
+    end: datetime | None = None
+    all_day: bool = False
+    location: str = ""
+
+
+@dataclass(frozen=True)
+class CoupleBriefContent:
+    names: str
+    reminders: list[str]
+    meal: MealIdea
+    spark: MarriageSpark
+    closing: str
+    calendar_events: list[CalendarEvent] = field(default_factory=list)
+    calendar_note: str = ""
+
+
+@dataclass(frozen=True)
 class FeedItem:
     title: str
     url: str

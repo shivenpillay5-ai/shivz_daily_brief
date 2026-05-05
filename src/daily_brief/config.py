@@ -67,10 +67,36 @@ class WhatsAppConfig:
 
 
 @dataclass(frozen=True)
+class CoupleBriefConfig:
+    email_to: list[str]
+    subject_prefix: str
+    names: str
+    reminders: list[str]
+
+
+@dataclass(frozen=True)
+class CalendarSourceConfig:
+    calendar_id: str
+    label: str
+
+
+@dataclass(frozen=True)
+class GoogleCalendarConfig:
+    enabled: bool
+    credentials_file: Path
+    token_file: Path
+    calendars: list[CalendarSourceConfig]
+    lookahead_days: int
+    max_events_per_calendar: int
+
+
+@dataclass(frozen=True)
 class AppConfig:
     location: LocationConfig
     email: EmailConfig
     whatsapp: WhatsAppConfig
+    couple: CoupleBriefConfig
+    google_calendar: GoogleCalendarConfig
     news_feeds: list[FeedConfig]
     ai_tech_feeds: list[FeedConfig]
     top_n: int
@@ -132,6 +158,44 @@ def load_config(env_file: Path | None = None) -> AppConfig:
             recipients=_split_phone_numbers(_get("WHATSAPP_TO", "")),
             api_version=_get("WHATSAPP_API_VERSION", "v24.0"),
         ),
+        couple=CoupleBriefConfig(
+            email_to=_split_csv(_get("COUPLE_EMAIL_TO", "")),
+            subject_prefix=_get(
+                "COUPLE_SUBJECT_PREFIX",
+                "Team ShiNola - Our Daily Brief",
+            ),
+            names=_get("COUPLE_NAMES", "you two"),
+            reminders=_split_semicolon(
+                _get(
+                    "COUPLE_REMINDERS",
+                    (
+                        "Check the shared Gmail calendars for anything that needs a"
+                        " family handoff.;Pick one small admin item to close before it"
+                        " becomes background noise.;Keep dinner simple enough that the"
+                        " evening still has breathing room."
+                    ),
+                )
+            ),
+        ),
+        google_calendar=GoogleCalendarConfig(
+            enabled=_get_bool("GOOGLE_CALENDAR_ENABLED", False),
+            credentials_file=_project_path(
+                project_root,
+                _get("GOOGLE_CALENDAR_CREDENTIALS_FILE", "credentials.json"),
+            ),
+            token_file=_project_path(
+                project_root,
+                _get("GOOGLE_CALENDAR_TOKEN_FILE", "token.json"),
+            ),
+            calendars=_parse_calendar_sources(
+                _get("GOOGLE_CALENDAR_IDS", "primary|Primary")
+            ),
+            lookahead_days=max(1, int(_get("GOOGLE_CALENDAR_LOOKAHEAD_DAYS", "3"))),
+            max_events_per_calendar=max(
+                1,
+                int(_get("GOOGLE_CALENDAR_MAX_EVENTS_PER_CALENDAR", "12")),
+            ),
+        ),
         news_feeds=_parse_feeds(_get("NEWS_FEEDS", DEFAULT_NEWS_FEEDS)),
         ai_tech_feeds=_parse_feeds(_get("AI_TECH_FEEDS", DEFAULT_AI_TECH_FEEDS)),
         top_n=int(_get("TOP_N", "5")),
@@ -172,6 +236,10 @@ def _split_csv(value: str) -> list[str]:
     return [part.strip() for part in value.split(",") if part.strip()]
 
 
+def _split_semicolon(value: str) -> list[str]:
+    return [part.strip() for part in value.split(";") if part.strip()]
+
+
 def _split_phone_numbers(value: str) -> list[str]:
     numbers: list[str] = []
     for part in _split_csv(value):
@@ -179,6 +247,33 @@ def _split_phone_numbers(value: str) -> list[str]:
         if normalized:
             numbers.append(normalized)
     return numbers
+
+
+def _project_path(project_root: Path, value: str) -> Path:
+    path = Path(value)
+    if path.is_absolute():
+        return path
+    return project_root / path
+
+
+def _parse_calendar_sources(value: str) -> list[CalendarSourceConfig]:
+    calendars: list[CalendarSourceConfig] = []
+    for raw_part in value.split(";"):
+        part = raw_part.strip()
+        if not part:
+            continue
+
+        if "|" in part:
+            calendar_id, label = part.split("|", 1)
+        else:
+            calendar_id, label = part, part
+
+        calendar_id = calendar_id.strip()
+        label = label.strip() or calendar_id
+        if calendar_id:
+            calendars.append(CalendarSourceConfig(calendar_id=calendar_id, label=label))
+
+    return calendars or [CalendarSourceConfig(calendar_id="primary", label="Primary")]
 
 
 def _parse_feeds(value: str) -> list[FeedConfig]:

@@ -1,11 +1,18 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 
 from daily_brief.config import AppConfig
-from daily_brief.models import DevotionalContent, MarketPulse, MorningSummary
+from daily_brief.models import (
+    CoupleBriefContent,
+    DevotionalContent,
+    MarketPulse,
+    MorningSummary,
+)
 from daily_brief.tools.alerts import send_failure_alert as send_failure_alert_email
+from daily_brief.tools.couple import build_couple_brief
+from daily_brief.tools.couple_rendering import render_couple_html, render_couple_text
 from daily_brief.tools.devotional import build_daily_devotional
 from daily_brief.tools.devotional_rendering import (
     render_devotional_html,
@@ -13,6 +20,7 @@ from daily_brief.tools.devotional_rendering import (
     render_devotional_whatsapp_text,
 )
 from daily_brief.tools.email import send_email
+from daily_brief.tools.google_calendar import authorize_google_calendar
 from daily_brief.tools.market import fetch_market_pulse
 from daily_brief.tools.news import fetch_feed_items
 from daily_brief.tools.ranking import rank_items
@@ -39,6 +47,14 @@ class DevotionalBrief:
     html_body: str
     whatsapp_body: str
     devotional: DevotionalContent
+
+
+@dataclass(frozen=True)
+class CoupleBrief:
+    subject: str
+    text_body: str
+    html_body: str
+    content: CoupleBriefContent
 
 
 class DailyBriefAgent:
@@ -159,6 +175,17 @@ class DailyBriefAgent:
             devotional=devotional,
         )
 
+    def build_couple(self, brief_date: datetime) -> CoupleBrief:
+        print("Building couple brief...")
+        content = build_couple_brief(brief_date=brief_date, config=self.config)
+        subject = f"{self.config.couple.subject_prefix} - {brief_date:%Y-%m-%d}"
+        return CoupleBrief(
+            subject=subject,
+            text_body=render_couple_text(brief_date, content),
+            html_body=render_couple_html(brief_date, content),
+            content=content,
+        )
+
     def send(self, brief: Brief) -> None:
         send_email(
             self.config.email,
@@ -178,11 +205,26 @@ class DailyBriefAgent:
             html_body=brief.html_body,
         )
 
+    def send_couple(self, brief: CoupleBrief) -> None:
+        if not self.config.couple.email_to:
+            raise ValueError("COUPLE_EMAIL_TO must be set before sending the couple brief.")
+
+        couple_email = replace(self.config.email, email_to=self.config.couple.email_to)
+        send_email(
+            couple_email,
+            subject=brief.subject,
+            text_body=brief.text_body,
+            html_body=brief.html_body,
+        )
+
     def send_devotional_whatsapp(self, brief: DevotionalBrief) -> None:
         send_whatsapp_message(self.config.whatsapp, brief.whatsapp_body)
 
     def send_whatsapp_template(self) -> None:
         send_whatsapp_template(self.config.whatsapp)
+
+    def authorize_google_calendar(self) -> None:
+        authorize_google_calendar(self.config.google_calendar)
 
     def send_failure_alert(
         self,

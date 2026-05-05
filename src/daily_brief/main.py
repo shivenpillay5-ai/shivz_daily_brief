@@ -21,6 +21,11 @@ def main() -> None:
         action="store_true",
         help="Build the Daily Motivation and Bible Verse email instead of the news brief.",
     )
+    parser.add_argument(
+        "--couple",
+        action="store_true",
+        help="Build the private couple email instead of the news brief.",
+    )
     parser.add_argument("--send", action="store_true", help="Send email instead of previewing.")
     parser.add_argument(
         "--send-whatsapp",
@@ -31,6 +36,11 @@ def main() -> None:
         "--send-whatsapp-template",
         action="store_true",
         help="Send Meta's hello_world WhatsApp template to test delivery.",
+    )
+    parser.add_argument(
+        "--google-calendar-auth",
+        action="store_true",
+        help="Authorize read-only Google Calendar access and save token.json.",
     )
     parser.add_argument(
         "--send-failure-alert",
@@ -64,6 +74,11 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    if args.devotional and args.couple:
+        parser.error("Choose only one mode: --devotional or --couple.")
+    if args.couple and args.send_whatsapp:
+        parser.error("--couple is email-only for now; use --couple --send.")
+
     config = load_config(args.env_file)
     brief_date = _now(config.location.timezone)
     agent = DailyBriefAgent(config)
@@ -72,6 +87,12 @@ def main() -> None:
         print("Sending WhatsApp template...")
         agent.send_whatsapp_template()
         print("WhatsApp template sent.")
+        return
+
+    if args.google_calendar_auth:
+        print("Authorizing Google Calendar...")
+        agent.authorize_google_calendar()
+        print(f"Google Calendar token saved to {config.google_calendar.token_file}")
         return
 
     if args.send_failure_alert:
@@ -119,6 +140,28 @@ def main() -> None:
         print(brief.whatsapp_body)
         print("")
         print("Run with --devotional --send when you want to send it.")
+        return
+
+    if args.couple:
+        brief = agent.build_couple(brief_date=brief_date)
+
+        if args.save_html:
+            args.save_html.write_text(brief.html_body, encoding="utf-8")
+            print(f"Saved couple HTML preview to {args.save_html}")
+
+        if args.send:
+            print("Sending couple email...")
+            agent.send_couple(brief)
+            print("Couple email sent.")
+            return
+
+        print("")
+        print("=" * 72)
+        print(f"Couple preview only. Subject: {brief.subject}")
+        print("=" * 72)
+        print(brief.text_body)
+        print("")
+        print("Run with --couple --send when COUPLE_EMAIL_TO is ready.")
         return
 
     brief = agent.build(brief_date=brief_date, use_openai=use_openai)

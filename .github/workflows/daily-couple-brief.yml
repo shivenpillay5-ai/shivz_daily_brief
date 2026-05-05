@@ -1,0 +1,111 @@
+name: Team ShiNola - Our Daily Brief
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 09:00 Africa/Johannesburg. GitHub schedules are UTC.
+    - cron: "0 7 * * *"
+
+jobs:
+  send-couple-brief:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: "587"
+      SMTP_USE_TLS: "true"
+      SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+      EMAIL_TO: ${{ secrets.COUPLE_EMAIL_TO }}
+
+      COUPLE_EMAIL_TO: ${{ secrets.COUPLE_EMAIL_TO }}
+      COUPLE_SUBJECT_PREFIX: "Team ShiNola - Our Daily Brief"
+      COUPLE_NAMES: "Shivz and Nola"
+      COUPLE_REMINDERS: "Check the shared Gmail calendar for anything that needs a family handoff.;Pick one small admin item to close before it becomes background noise.;Keep dinner simple enough that the evening still has breathing room."
+
+      LOCATION_NAME: "Johannesburg"
+      LATITUDE: "-26.2041"
+      LONGITUDE: "28.0473"
+      TIMEZONE: "Africa/Johannesburg"
+
+      GOOGLE_CALENDAR_ENABLED: "true"
+      GOOGLE_CALENDAR_CREDENTIALS_FILE: "credentials.json"
+      GOOGLE_CALENDAR_TOKEN_FILE: "token.json"
+      GOOGLE_CALENDAR_IDS: "primary|Shiven"
+      GOOGLE_CALENDAR_LOOKAHEAD_DAYS: "7"
+      GOOGLE_CALENDAR_MAX_EVENTS_PER_CALENDAR: "12"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Run tests
+        run: python -m unittest discover -s tests
+
+      - name: Write Google Calendar OAuth files
+        shell: bash
+        env:
+          GOOGLE_CALENDAR_CREDENTIALS_JSON_B64: ${{ secrets.GOOGLE_CALENDAR_CREDENTIALS_JSON_B64 }}
+          GOOGLE_CALENDAR_TOKEN_JSON_B64: ${{ secrets.GOOGLE_CALENDAR_TOKEN_JSON_B64 }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GOOGLE_CALENDAR_CREDENTIALS_JSON_B64}" ]; then
+            echo "Missing GOOGLE_CALENDAR_CREDENTIALS_JSON_B64 secret."
+            exit 1
+          fi
+
+          if [ -z "${GOOGLE_CALENDAR_TOKEN_JSON_B64}" ]; then
+            echo "Missing GOOGLE_CALENDAR_TOKEN_JSON_B64 secret."
+            exit 1
+          fi
+
+          printf '%s' "${GOOGLE_CALENDAR_CREDENTIALS_JSON_B64}" | base64 --decode > credentials.json
+          printf '%s' "${GOOGLE_CALENDAR_TOKEN_JSON_B64}" | base64 --decode > token.json
+
+      - name: Send Team ShiNola email with retries
+        shell: bash
+        run: |
+          set +e
+          : > couple-brief-run.log
+
+          for attempt in 1 2 3; do
+            echo "::group::Team ShiNola attempt ${attempt}" | tee -a couple-brief-run.log
+            daily-brief --couple --send 2>&1 | tee -a couple-brief-run.log
+            status=${PIPESTATUS[0]}
+            echo "::endgroup::"
+
+            if [ "$status" -eq 0 ]; then
+              echo "Team ShiNola brief sent on attempt ${attempt}." | tee -a couple-brief-run.log
+              exit 0
+            fi
+
+            echo "Attempt ${attempt} failed with exit code ${status}." | tee -a couple-brief-run.log
+            if [ "$attempt" -lt 3 ]; then
+              echo "Waiting 15 minutes before retry..." | tee -a couple-brief-run.log
+              sleep 900
+            fi
+          done
+
+          exit 1
+
+      - name: Send failure alert
+        if: failure()
+        run: |
+          daily-brief --send-failure-alert \
+            --failure-alert-name "Team ShiNola - Our Daily Brief" \
+            --failure-log couple-brief-run.log \
+            --failure-run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

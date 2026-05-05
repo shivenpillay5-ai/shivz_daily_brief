@@ -95,6 +95,66 @@ class ConfigTests(unittest.TestCase):
 
         self.assertEqual(config.devotional_subject_prefix, "Morning Verse")
 
+    @patch.dict(
+        "os.environ",
+        {
+            "COUPLE_EMAIL_TO": "you@example.com,spouse@example.com",
+            "COUPLE_SUBJECT_PREFIX": "Custom Couple Brief",
+            "COUPLE_NAMES": "Shiv and spouse",
+            "COUPLE_REMINDERS": "Check calendars;Confirm dinner plan",
+        },
+        clear=True,
+    )
+    def test_couple_config_is_parsed(self) -> None:
+        config = load_config()
+
+        self.assertEqual(
+            config.couple.email_to,
+            ["you@example.com", "spouse@example.com"],
+        )
+        self.assertEqual(config.couple.subject_prefix, "Custom Couple Brief")
+        self.assertEqual(config.couple.names, "Shiv and spouse")
+        self.assertEqual(
+            config.couple.reminders,
+            ["Check calendars", "Confirm dinner plan"],
+        )
+
+    @patch.dict(
+        "os.environ",
+        {
+            "GOOGLE_CALENDAR_ENABLED": "true",
+            "GOOGLE_CALENDAR_CREDENTIALS_FILE": "config/google-client.json",
+            "GOOGLE_CALENDAR_TOKEN_FILE": "config/google-token.json",
+            "GOOGLE_CALENDAR_IDS": "primary|Shiven;wife@example.com|Nolene",
+            "GOOGLE_CALENDAR_LOOKAHEAD_DAYS": "5",
+            "GOOGLE_CALENDAR_MAX_EVENTS_PER_CALENDAR": "9",
+        },
+        clear=True,
+    )
+    def test_google_calendar_config_is_parsed(self) -> None:
+        config = load_config()
+
+        self.assertTrue(config.google_calendar.enabled)
+        self.assertTrue(
+            str(config.google_calendar.credentials_file)
+            .replace("\\", "/")
+            .endswith("config/google-client.json")
+        )
+        self.assertTrue(
+            str(config.google_calendar.token_file)
+            .replace("\\", "/")
+            .endswith("config/google-token.json")
+        )
+        self.assertEqual(
+            [
+                (calendar.calendar_id, calendar.label)
+                for calendar in config.google_calendar.calendars
+            ],
+            [("primary", "Shiven"), ("wife@example.com", "Nolene")],
+        )
+        self.assertEqual(config.google_calendar.lookahead_days, 5)
+        self.assertEqual(config.google_calendar.max_events_per_calendar, 9)
+
 
 if __name__ == "__main__":
     unittest.main()

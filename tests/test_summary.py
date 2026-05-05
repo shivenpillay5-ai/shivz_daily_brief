@@ -3,12 +3,16 @@ from __future__ import annotations
 import json
 import unittest
 from datetime import datetime
+from pathlib import Path
 from unittest.mock import patch
 
 from daily_brief.config import (
     AppConfig,
+    CalendarSourceConfig,
+    CoupleBriefConfig,
     EmailConfig,
     FeedConfig,
+    GoogleCalendarConfig,
     LocationConfig,
     WhatsAppConfig,
 )
@@ -126,6 +130,20 @@ def _config(openai_api_key: str) -> AppConfig:
             access_token="secret",
             recipients=["27820000000"],
             api_version="v24.0",
+        ),
+        couple=CoupleBriefConfig(
+            email_to=["spouse@example.com"],
+            subject_prefix="Team ShiNola - Our Daily Brief",
+            names="you two",
+            reminders=["Check the shared Gmail calendars."],
+        ),
+        google_calendar=GoogleCalendarConfig(
+            enabled=False,
+            credentials_file=Path("credentials.json"),
+            token_file=Path("token.json"),
+            calendars=[CalendarSourceConfig(calendar_id="primary", label="Primary")],
+            lookahead_days=3,
+            max_events_per_calendar=12,
         ),
         news_feeds=[FeedConfig(name="News", url="https://example.com/rss")],
         ai_tech_feeds=[FeedConfig(name="AI", url="https://example.com/ai/rss")],

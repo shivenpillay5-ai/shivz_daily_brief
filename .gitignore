@@ -8,4 +8,7 @@ dist/
 *.egg-info/
 preview.html
 devotional-preview.html
+couple-preview.html
+credentials.json
+token.json
 logs/

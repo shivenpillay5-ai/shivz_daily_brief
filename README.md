@@ -9,6 +9,7 @@ This is a small learning project that builds a daily email brief with:
 - top 5 world news links
 - top 5 AI and tech story links
 - a separate Daily Motivation and Bible Verse email
+- a private couple brief with calendar nudges, a dish photo, a short recipe, and a weekly marriage spark
 
 The project is intentionally split into simple modules so you can learn how a practical agent is built:
 
@@ -19,7 +20,8 @@ The project is intentionally split into simple modules so you can learn how a pr
 5. Send it by email.
 6. Schedule it to run daily at 07:00.
 7. Build a separate devotional email from a scripture prompt.
-8. Alert you if the scheduled run fails after retries.
+8. Build a private couple email for you and your spouse.
+9. Alert you if the scheduled run fails after retries.
 
 ## Project Map
 
@@ -40,8 +42,11 @@ daily-brief-agent/
       ranking.py   # prompt-based ranking, with fallback ranking
       summary.py   # prompt-based morning summary, with fallback summary
       devotional.py # scripture rotation and devotional reflection
+      couple.py    # private couple brief content rotation
+      google_calendar.py # read-only Google Calendar OAuth and event fetching
       rendering.py # email text and HTML
       devotional_rendering.py # devotional text, HTML, and WhatsApp rendering
+      couple_rendering.py # couple brief text and HTML rendering
       email.py     # SMTP sending
       alerts.py    # failure alert email
       whatsapp.py  # WhatsApp Cloud API sending
@@ -126,6 +131,66 @@ Send the devotional email:
 daily-brief --devotional --send
 ```
 
+Preview the private couple brief:
+
+```powershell
+daily-brief --couple
+```
+
+Preview the couple HTML:
+
+```powershell
+daily-brief --couple --save-html couple-preview.html
+```
+
+Send the couple email:
+
+```powershell
+daily-brief --couple --send
+```
+
+`--couple --send` uses `COUPLE_EMAIL_TO`, not `EMAIL_TO`, so the private note does not accidentally go to the wider family list.
+
+## Google Calendar Setup For The Couple Brief
+
+The Google Calendar integration is read-only. It uses Google's Calendar API Python OAuth pattern with the `https://www.googleapis.com/auth/calendar.readonly` scope.
+
+1. In Google Calendar, share any calendars you want included with the Google account that will run this app.
+2. In Google Cloud Console, enable the Google Calendar API for a project.
+3. Configure the OAuth consent screen for testing.
+4. Create an OAuth Client ID with application type `Desktop app`.
+5. Download the client JSON file and save it in this project as `credentials.json`.
+6. Install or refresh dependencies:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e .
+```
+
+7. Set these values in `.env`:
+
+```text
+GOOGLE_CALENDAR_ENABLED=true
+GOOGLE_CALENDAR_CREDENTIALS_FILE=credentials.json
+GOOGLE_CALENDAR_TOKEN_FILE=token.json
+GOOGLE_CALENDAR_IDS=primary|Shiven;your-wife-calendar-id@gmail.com|Nolene
+GOOGLE_CALENDAR_LOOKAHEAD_DAYS=3
+GOOGLE_CALENDAR_MAX_EVENTS_PER_CALENDAR=12
+```
+
+8. Run the one-time auth command:
+
+```powershell
+.\.venv\Scripts\daily-brief.exe --google-calendar-auth
+```
+
+That opens a browser login and saves `token.json`. After that:
+
+```powershell
+.\.venv\Scripts\daily-brief.exe --couple --save-html couple-preview.html
+```
+
+The couple brief will show a calendar snapshot above the nudges. Both `credentials.json` and `token.json` are ignored by git.
+
 ## Scheduling At 07:00
 
 The scheduled task is the alarm clock. The agent is the Python workflow it wakes up.
@@ -151,7 +216,30 @@ The GitHub workflows run from GitHub's cloud runners. That means your local mach
 
 The news brief workflow in `.github/workflows/daily-brief.yml` starts at 07:00 Africa/Johannesburg time.
 The devotional workflow in `.github/workflows/daily-devotional.yml` starts at 07:10 Africa/Johannesburg time.
-The cron values in those files are written in UTC: `05:00` and `05:10`, because South Africa is UTC+2.
+The Team ShiNola workflow in `.github/workflows/daily-couple-brief.yml` starts at 09:00 Africa/Johannesburg time.
+The cron values in those files are written in UTC: `05:00`, `05:10`, and `07:00`, because South Africa is UTC+2.
+
+The Team ShiNola workflow needs these repository secrets:
+
+```text
+COUPLE_EMAIL_TO
+GOOGLE_CALENDAR_CREDENTIALS_JSON_B64
+GOOGLE_CALENDAR_TOKEN_JSON_B64
+```
+
+Create the two Google Calendar secret values from the local OAuth files:
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("credentials.json")) | Set-Clipboard
+```
+
+Save the clipboard value as `GOOGLE_CALENDAR_CREDENTIALS_JSON_B64`, then run:
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("token.json")) | Set-Clipboard
+```
+
+Save that clipboard value as `GOOGLE_CALENDAR_TOKEN_JSON_B64`.
 
 If sending fails, each workflow retries inside the same run:
 
@@ -177,6 +265,8 @@ If all three attempts fail, the app sends a failure alert email using the same S
 `src/daily_brief/prompts/summary_prompt.py` contains the morning-summary instruction. It gives the model the selected weather, market, world, and AI/tech facts and asks for a short reader-friendly summary without inventing details.
 
 `src/daily_brief/prompts/devotional_prompt.py` contains the devotional instruction. It gives the model one public-domain KJV verse and asks for a short practical reflection plus a broader motivational closing. If no OpenAI key is configured, the app uses the curated fallback reflection and motivational closing.
+
+The couple brief rotates meal ideas and short recipes daily, keeps one marriage spark for the week, renders configured calendar nudges from `COUPLE_REMINDERS`, and can optionally read Google Calendar events. Recipe photos are loaded from public Wikimedia Commons URLs.
 
 That separation is important:
 
@@ -208,6 +298,17 @@ EMAIL_FROM=your_email@gmail.com
 EMAIL_TO=you@example.com
 EMAIL_SUBJECT_PREFIX=Shivz Daily Brief
 DEVOTIONAL_SUBJECT_PREFIX=Daily Motivation and Bible Verse
+
+COUPLE_EMAIL_TO=you@example.com,spouse@example.com
+COUPLE_SUBJECT_PREFIX=Team ShiNola - Our Daily Brief
+COUPLE_NAMES=you two
+COUPLE_REMINDERS=Check the shared Gmail calendars;Confirm one family handoff
+
+GOOGLE_CALENDAR_ENABLED=true
+GOOGLE_CALENDAR_CREDENTIALS_FILE=credentials.json
+GOOGLE_CALENDAR_TOKEN_FILE=token.json
+GOOGLE_CALENDAR_IDS=primary|Shiven;your-wife-calendar-id@gmail.com|Nolene
+GOOGLE_CALENDAR_LOOKAHEAD_DAYS=3
 
 WHATSAPP_ENABLED=true
 WHATSAPP_PHONE_NUMBER_ID=...
