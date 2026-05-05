@@ -151,6 +151,7 @@ The GitHub workflows run from GitHub's cloud runners. That means your local mach
 
 The news brief workflow in `.github/workflows/daily-brief.yml` starts at 07:00 Africa/Johannesburg time.
 The devotional workflow in `.github/workflows/daily-devotional.yml` starts at 07:10 Africa/Johannesburg time.
+The cron values in those files are written in UTC: `05:00` and `05:10`, because South Africa is UTC+2.
 
 If sending fails, each workflow retries inside the same run:
 
