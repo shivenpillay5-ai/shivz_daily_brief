@@ -91,6 +91,9 @@ class AgentTests(unittest.TestCase):
         self.assertIn("https://example.com", brief.text_body)
         self.assertIn("https://example.com", brief.html_body)
         self.assertIn("https://example.com", brief.whatsapp_body)
+        self.assertEqual(len(brief.whatsapp_template_parameters), 4)
+        self.assertIn("Johannesburg", brief.whatsapp_template_parameters[1])
+        self.assertIn("Story", brief.whatsapp_template_parameters[2])
         self.assertIn("USD/ZAR", brief.text_body)
         self.assertIn("Morning Signal", brief.html_body)
 

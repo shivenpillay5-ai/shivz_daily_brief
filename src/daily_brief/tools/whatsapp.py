@@ -2,7 +2,8 @@ from __future__ import annotations
 
 """WhatsApp sending tool used by DailyBriefAgent."""
 
-from collections.abc import Callable
+import re
+from collections.abc import Callable, Sequence
 
 from daily_brief.config import WhatsAppConfig
 from daily_brief.http_client import post_json
@@ -28,21 +29,36 @@ def send_whatsapp_message(config: WhatsAppConfig, body: str) -> list[dict[str, o
 
 def send_whatsapp_template(
     config: WhatsAppConfig,
-    template_name: str = "hello_world",
-    language_code: str = "en_US",
+    template_name: str | None = None,
+    language_code: str | None = None,
+    body_parameters: Sequence[str] | None = None,
 ) -> list[dict[str, object]]:
     _validate_whatsapp_config(config)
+    resolved_template_name = template_name or config.template_name
+    resolved_language_code = language_code or config.template_language
 
     def build_payload(recipient: str) -> dict[str, object]:
+        template: dict[str, object] = {
+            "name": resolved_template_name,
+            "language": {"code": resolved_language_code},
+        }
+        if body_parameters:
+            template["components"] = [
+                {
+                    "type": "body",
+                    "parameters": [
+                        {"type": "text", "text": _sanitize_template_parameter(parameter)}
+                        for parameter in body_parameters
+                    ],
+                }
+            ]
+
         return {
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
             "to": recipient,
             "type": "template",
-            "template": {
-                "name": template_name,
-                "language": {"code": language_code},
-            },
+            "template": template,
         }
 
     return _send_to_recipients(config, build_payload)
@@ -68,8 +84,9 @@ def _send_to_recipients(
                 headers=headers,
             )
         except RuntimeError as exc:
-            failures.append(f"{recipient}: {exc}")
-            print(f"WhatsApp API rejected message for {recipient}: {exc}")
+            masked_recipient = _mask_recipient(recipient)
+            failures.append(f"{masked_recipient}: {exc}")
+            print(f"WhatsApp API rejected message for {masked_recipient}: {exc}")
             continue
 
         _print_response(recipient, response)
@@ -106,4 +123,16 @@ def _print_response(recipient: str, response: dict[str, object]) -> None:
         if isinstance(raw_id, str):
             message_id = raw_id
 
-    print(f"WhatsApp API accepted message for {recipient}: {message_id}")
+    print(f"WhatsApp API accepted message for {_mask_recipient(recipient)}: {message_id}")
+
+
+def _mask_recipient(recipient: str) -> str:
+    if len(recipient) <= 4:
+        return "<masked>"
+    return f"...{recipient[-4:]}"
+
+
+def _sanitize_template_parameter(parameter: object) -> str:
+    text = str(parameter).replace("\r\n", " | ").replace("\n", " | ")
+    text = text.replace("\r", " | ").replace("\t", " ")
+    return re.sub(r"\s{2,}", " ", text).strip()

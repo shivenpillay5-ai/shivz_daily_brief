@@ -8,6 +8,7 @@ This is a small learning project that builds a daily email brief with:
 - a short morning summary written from the day's signals
 - top 5 world news links
 - top 5 AI and tech story links
+- an approved WhatsApp template version of the daily brief
 - a separate Daily Motivation and Bible Verse email
 - a private couple brief with calendar nudges, a dish photo, a short recipe, and a weekly marriage spark
 
@@ -106,6 +107,15 @@ Send the WhatsApp version:
 ```powershell
 daily-brief --send-whatsapp --no-openai
 ```
+
+Send the approved WhatsApp template notification:
+
+```powershell
+daily-brief --send-whatsapp-template
+```
+
+That sends the approved `shivz_daily_brief_v1` template with four body values:
+date, weather, world headlines, and AI/tech headlines.
 
 Force the non-OpenAI fallback ranking:
 
@@ -249,6 +259,21 @@ If sending fails, each workflow retries inside the same run:
 
 If all three attempts fail, the app sends a failure alert email using the same SMTP settings. The alert includes a link to the failed GitHub Actions run and the latest captured log output.
 
+To send the WhatsApp template from GitHub Actions, add these repository secrets too:
+
+```text
+WHATSAPP_ENABLED
+WHATSAPP_PHONE_NUMBER_ID
+WHATSAPP_BUSINESS_ACCOUNT_ID
+WHATSAPP_ACCESS_TOKEN
+WHATSAPP_TO
+```
+
+Use a Meta System User access token for `WHATSAPP_ACCESS_TOKEN` in GitHub Actions.
+The temporary token from the WhatsApp API setup screen is useful for testing, but it can expire and is not a good daily scheduler token.
+
+The workflow uses `WHATSAPP_TEMPLATE_NAME=shivz_daily_brief_v1` and `WHATSAPP_TEMPLATE_LANGUAGE=en`.
+
 ## How The Prompt Fits In
 
 `src/daily_brief/agent.py` coordinates the workflow: fetch weather, fetch news, rank stories, render the email, and send it.
@@ -315,6 +340,8 @@ WHATSAPP_PHONE_NUMBER_ID=...
 WHATSAPP_BUSINESS_ACCOUNT_ID=...
 WHATSAPP_ACCESS_TOKEN=...
 WHATSAPP_TO=27821234567
+WHATSAPP_TEMPLATE_NAME=shivz_daily_brief_v1
+WHATSAPP_TEMPLATE_LANGUAGE=en
 ```
 
 Feed lists are semicolon-separated. Each entry is `Name|URL`.

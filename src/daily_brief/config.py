@@ -64,6 +64,8 @@ class WhatsAppConfig:
     access_token: str
     recipients: list[str]
     api_version: str
+    template_name: str = "shivz_daily_brief_v1"
+    template_language: str = "en"
 
 
 @dataclass(frozen=True)
@@ -157,6 +159,8 @@ def load_config(env_file: Path | None = None) -> AppConfig:
             access_token=_get_secret("WHATSAPP_ACCESS_TOKEN", ""),
             recipients=_split_phone_numbers(_get("WHATSAPP_TO", "")),
             api_version=_get("WHATSAPP_API_VERSION", "v24.0"),
+            template_name=_get("WHATSAPP_TEMPLATE_NAME", "shivz_daily_brief_v1"),
+            template_language=_get("WHATSAPP_TEMPLATE_LANGUAGE", "en"),
         ),
         couple=CoupleBriefConfig(
             email_to=_split_csv(_get("COUPLE_EMAIL_TO", "")),

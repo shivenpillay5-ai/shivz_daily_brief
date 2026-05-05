@@ -17,6 +17,7 @@ from daily_brief.models import (
 
 SUMMARY_MAX_CHARS = 360
 BRIEF_NAME = "Shivz Daily Brief"
+WHATSAPP_TEMPLATE_PARAMETER_MAX_CHARS = 900
 
 
 def render_text(
@@ -163,6 +164,22 @@ def render_whatsapp_text(
     return _clip_message("\n".join(lines))
 
 
+def render_whatsapp_template_parameters(
+    brief_date: datetime,
+    weather_reports: list[WeatherReport],
+    world_items: list[RankedItem],
+    ai_tech_items: list[RankedItem],
+) -> list[str]:
+    return [
+        f"{brief_date:%A, %d %B %Y}",
+        _clip_template_parameter(" | ".join(_whatsapp_weather_lines(weather_reports))),
+        _clip_template_parameter(" | ".join(_whatsapp_template_story_lines(world_items))),
+        _clip_template_parameter(
+            " | ".join(_whatsapp_template_story_lines(ai_tech_items))
+        ),
+    ]
+
+
 def _summary_lines(morning_summary: MorningSummary | None) -> list[str]:
     if morning_summary is None:
         return []
@@ -304,6 +321,17 @@ def _whatsapp_story_lines(items: list[RankedItem]) -> list[str]:
     for index, item in enumerate(items, start=1):
         lines.append(f"{index}. *{item.title}*")
         lines.append(f"   {item.url}")
+    return lines
+
+
+def _whatsapp_template_story_lines(items: list[RankedItem]) -> list[str]:
+    if not items:
+        return ["No stories found."]
+
+    lines: list[str] = []
+    for index, item in enumerate(items[:3], start=1):
+        line = f"{index}. {item.title} ({item.source})"
+        lines.append(_shorten(line, max_chars=180))
     return lines
 
 
@@ -700,3 +728,13 @@ def _clip_message(value: str, max_chars: int = 3800) -> str:
     if len(value) <= max_chars:
         return value
     return value[: max_chars - 30].rstrip() + "\n\n...trimmed for WhatsApp"
+
+
+def _clip_template_parameter(
+    value: str,
+    max_chars: int = WHATSAPP_TEMPLATE_PARAMETER_MAX_CHARS,
+) -> str:
+    value = value.strip()
+    if len(value) <= max_chars:
+        return value
+    return value[: max_chars - 12].rstrip() + "...more"

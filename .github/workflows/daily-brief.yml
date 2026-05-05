@@ -37,6 +37,8 @@ jobs:
       WHATSAPP_BUSINESS_ACCOUNT_ID: ${{ secrets.WHATSAPP_BUSINESS_ACCOUNT_ID }}
       WHATSAPP_ACCESS_TOKEN: ${{ secrets.WHATSAPP_ACCESS_TOKEN }}
       WHATSAPP_TO: ${{ secrets.WHATSAPP_TO }}
+      WHATSAPP_TEMPLATE_NAME: shivz_daily_brief_v1
+      WHATSAPP_TEMPLATE_LANGUAGE: en
 
     steps:
       - name: Check out repository
@@ -70,6 +72,32 @@ jobs:
 
             if [ "$status" -eq 0 ]; then
               echo "Daily brief sent on attempt ${attempt}." | tee -a daily-brief-run.log
+              exit 0
+            fi
+
+            echo "Attempt ${attempt} failed with exit code ${status}." | tee -a daily-brief-run.log
+            if [ "$attempt" -lt 3 ]; then
+              echo "Waiting 15 minutes before retry..." | tee -a daily-brief-run.log
+              sleep 900
+            fi
+          done
+
+          exit 1
+
+      - name: Send WhatsApp template with retries
+        if: env.WHATSAPP_ENABLED == 'true' && env.WHATSAPP_ACCESS_TOKEN != '' && env.WHATSAPP_TO != ''
+        shell: bash
+        run: |
+          set +e
+
+          for attempt in 1 2 3; do
+            echo "::group::WhatsApp template attempt ${attempt}" | tee -a daily-brief-run.log
+            daily-brief --send-whatsapp-template 2>&1 | tee -a daily-brief-run.log
+            status=${PIPESTATUS[0]}
+            echo "::endgroup::"
+
+            if [ "$status" -eq 0 ]; then
+              echo "WhatsApp template sent on attempt ${attempt}." | tee -a daily-brief-run.log
               exit 0
             fi
 

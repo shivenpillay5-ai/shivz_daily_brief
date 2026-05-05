@@ -35,7 +35,7 @@ def main() -> None:
     parser.add_argument(
         "--send-whatsapp-template",
         action="store_true",
-        help="Send Meta's hello_world WhatsApp template to test delivery.",
+        help="Send the approved WhatsApp template version of the daily brief.",
     )
     parser.add_argument(
         "--google-calendar-auth",
@@ -76,18 +76,14 @@ def main() -> None:
 
     if args.devotional and args.couple:
         parser.error("Choose only one mode: --devotional or --couple.")
-    if args.couple and args.send_whatsapp:
+    if args.couple and (args.send_whatsapp or args.send_whatsapp_template):
         parser.error("--couple is email-only for now; use --couple --send.")
+    if args.devotional and args.send_whatsapp_template:
+        parser.error("--send-whatsapp-template is only for the news brief.")
 
     config = load_config(args.env_file)
     brief_date = _now(config.location.timezone)
     agent = DailyBriefAgent(config)
-
-    if args.send_whatsapp_template:
-        print("Sending WhatsApp template...")
-        agent.send_whatsapp_template()
-        print("WhatsApp template sent.")
-        return
 
     if args.google_calendar_auth:
         print("Authorizing Google Calendar...")
@@ -180,7 +176,12 @@ def main() -> None:
         agent.send_whatsapp(brief)
         print("WhatsApp sent.")
 
-    if args.send or args.send_whatsapp:
+    if args.send_whatsapp_template:
+        print("Sending WhatsApp template...")
+        agent.send_whatsapp_template(brief)
+        print("WhatsApp template sent.")
+
+    if args.send or args.send_whatsapp or args.send_whatsapp_template:
         return
 
     print("")

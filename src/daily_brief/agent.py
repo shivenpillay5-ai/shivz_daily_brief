@@ -24,7 +24,12 @@ from daily_brief.tools.google_calendar import authorize_google_calendar
 from daily_brief.tools.market import fetch_market_pulse
 from daily_brief.tools.news import fetch_feed_items
 from daily_brief.tools.ranking import rank_items
-from daily_brief.tools.rendering import render_html, render_text, render_whatsapp_text
+from daily_brief.tools.rendering import (
+    render_html,
+    render_text,
+    render_whatsapp_template_parameters,
+    render_whatsapp_text,
+)
 from daily_brief.tools.summary import write_morning_summary
 from daily_brief.tools.weather import fetch_weather
 from daily_brief.tools.whatsapp import send_whatsapp_message, send_whatsapp_template
@@ -36,6 +41,7 @@ class Brief:
     text_body: str
     html_body: str
     whatsapp_body: str
+    whatsapp_template_parameters: list[str]
     morning_summary: MorningSummary
     warnings: list[str]
 
@@ -144,6 +150,12 @@ class DailyBriefAgent:
             world_items=world_ranked,
             ai_tech_items=ai_tech_ranked,
         )
+        whatsapp_template_parameters = render_whatsapp_template_parameters(
+            brief_date=brief_date,
+            weather_reports=weather_reports,
+            world_items=world_ranked,
+            ai_tech_items=ai_tech_ranked,
+        )
         subject = f"{self.config.email.subject_prefix} - {brief_date:%Y-%m-%d}"
 
         return Brief(
@@ -151,6 +163,7 @@ class DailyBriefAgent:
             text_body=text_body,
             html_body=html_body,
             whatsapp_body=whatsapp_body,
+            whatsapp_template_parameters=whatsapp_template_parameters,
             morning_summary=morning_summary,
             warnings=warnings,
         )
@@ -220,8 +233,11 @@ class DailyBriefAgent:
     def send_devotional_whatsapp(self, brief: DevotionalBrief) -> None:
         send_whatsapp_message(self.config.whatsapp, brief.whatsapp_body)
 
-    def send_whatsapp_template(self) -> None:
-        send_whatsapp_template(self.config.whatsapp)
+    def send_whatsapp_template(self, brief: Brief) -> None:
+        send_whatsapp_template(
+            self.config.whatsapp,
+            body_parameters=brief.whatsapp_template_parameters,
+        )
 
     def authorize_google_calendar(self) -> None:
         authorize_google_calendar(self.config.google_calendar)

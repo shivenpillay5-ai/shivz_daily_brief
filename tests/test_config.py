@@ -47,6 +47,8 @@ class ConfigTests(unittest.TestCase):
             "WHATSAPP_BUSINESS_ACCOUNT_ID": "456",
             "WHATSAPP_ACCESS_TOKEN": "abc def",
             "WHATSAPP_TO": "27820000000,27830000000",
+            "WHATSAPP_TEMPLATE_NAME": "shivz_daily_brief_v1",
+            "WHATSAPP_TEMPLATE_LANGUAGE": "en",
         },
         clear=True,
     )
@@ -58,6 +60,8 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(config.whatsapp.business_account_id, "456")
         self.assertEqual(config.whatsapp.access_token, "abcdef")
         self.assertEqual(config.whatsapp.recipients, ["27820000000", "27830000000"])
+        self.assertEqual(config.whatsapp.template_name, "shivz_daily_brief_v1")
+        self.assertEqual(config.whatsapp.template_language, "en")
 
     @patch.dict(
         "os.environ",

@@ -15,6 +15,7 @@ from daily_brief.tools.rendering import (
     SUMMARY_MAX_CHARS,
     render_html,
     render_text,
+    render_whatsapp_template_parameters,
     render_whatsapp_text,
 )
 
@@ -224,6 +225,35 @@ class RendererTests(unittest.TestCase):
         self.assertIn("USD/ZAR R18.42 ↑ 0.4%", body)
         self.assertNotIn("Next few hours", body)
         self.assertNotIn("07:00", body)
+
+    def test_render_whatsapp_template_parameters_match_approved_template(self) -> None:
+        weather = _weather("Midrand")
+        world_item = RankedItem(
+            title="World story",
+            url="https://example.com/world",
+            source="Example World",
+            summary="Summary",
+        )
+        ai_item = RankedItem(
+            title="AI story",
+            url="https://example.com/ai",
+            source="Example AI",
+            summary="Summary",
+        )
+
+        parameters = render_whatsapp_template_parameters(
+            brief_date=datetime(2026, 5, 4),
+            weather_reports=[weather],
+            world_items=[world_item],
+            ai_tech_items=[ai_item],
+        )
+
+        self.assertEqual(len(parameters), 4)
+        self.assertEqual(parameters[0], "Monday, 04 May 2026")
+        self.assertIn("Midrand", parameters[1])
+        self.assertIn("World story", parameters[2])
+        self.assertNotIn("https://example.com/world", parameters[2])
+        self.assertIn("AI story", parameters[3])
 
 
 def _weather(
