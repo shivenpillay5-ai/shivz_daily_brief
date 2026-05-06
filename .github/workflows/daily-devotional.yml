@@ -4,9 +4,6 @@ on:
   workflow_dispatch:
   repository_dispatch:
     types: [daily-devotional]
-  schedule:
-    # 07:29 Africa/Johannesburg. Avoid crowded top-of-hour schedule windows.
-    - cron: "29 5 * * *"
 
 jobs:
   send-devotional:
