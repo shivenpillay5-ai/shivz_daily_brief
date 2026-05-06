@@ -3,8 +3,8 @@ name: Daily Motivation and Bible Verse
 on:
   workflow_dispatch:
   schedule:
-    # 07:10 Africa/Johannesburg. GitHub schedules are most reliable as UTC.
-    - cron: "10 5 * * *"
+    # 07:29 Africa/Johannesburg. Avoid crowded top-of-hour schedule windows.
+    - cron: "29 5 * * *"
 
 jobs:
   send-devotional:

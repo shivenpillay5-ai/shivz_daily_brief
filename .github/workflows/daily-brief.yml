@@ -3,8 +3,8 @@ name: Shivz Daily Brief
 on:
   workflow_dispatch:
   schedule:
-    # 07:00 Africa/Johannesburg. GitHub schedules are most reliable as UTC.
-    - cron: "0 5 * * *"
+    # 07:17 Africa/Johannesburg. Avoid :00 because GitHub may drop jobs under hourly load.
+    - cron: "17 5 * * *"
 
 jobs:
   send-brief:

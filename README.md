@@ -224,10 +224,12 @@ Each scheduled run writes a log file into `logs/`.
 
 The GitHub workflows run from GitHub's cloud runners. That means your local machine does not need to be on.
 
-The news brief workflow in `.github/workflows/daily-brief.yml` starts at 07:00 Africa/Johannesburg time.
-The devotional workflow in `.github/workflows/daily-devotional.yml` starts at 07:10 Africa/Johannesburg time.
-The Team ShiNola workflow in `.github/workflows/daily-couple-brief.yml` starts at 09:00 Africa/Johannesburg time.
-The cron values in those files are written in UTC: `05:00`, `05:10`, and `07:00`, because South Africa is UTC+2.
+The news brief workflow in `.github/workflows/daily-brief.yml` starts at 07:17 Africa/Johannesburg time.
+The devotional workflow in `.github/workflows/daily-devotional.yml` starts at 07:29 Africa/Johannesburg time.
+The Team ShiNola workflow in `.github/workflows/daily-couple-brief.yml` starts at 09:17 Africa/Johannesburg time.
+The cron values in those files are written in UTC: `05:17`, `05:29`, and `07:17`, because South Africa is UTC+2.
+
+These are deliberately not scheduled at `:00`. GitHub notes that scheduled workflows can be delayed or dropped during high-load periods, especially at the start of the hour.
 
 The Team ShiNola workflow needs these repository secrets:
 
