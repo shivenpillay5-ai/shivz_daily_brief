@@ -231,6 +231,14 @@ The cron values in those files are written in UTC: `05:17`, `05:29`, and `07:17`
 
 These are deliberately not scheduled at `:00`. GitHub notes that scheduled workflows can be delayed or dropped during high-load periods, especially at the start of the hour.
 
+Each workflow also supports `repository_dispatch` as a fallback trigger for an external cloud scheduler:
+
+```text
+daily-brief
+daily-devotional
+team-shinola-brief
+```
+
 The Team ShiNola workflow needs these repository secrets:
 
 ```text

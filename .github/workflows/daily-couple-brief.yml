@@ -2,6 +2,8 @@ name: Team ShiNola - Our Daily Brief
 
 on:
   workflow_dispatch:
+  repository_dispatch:
+    types: [team-shinola-brief]
   schedule:
     # 09:17 Africa/Johannesburg. Avoid :00 because GitHub may drop jobs under hourly load.
     - cron: "17 7 * * *"

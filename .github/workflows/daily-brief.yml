@@ -2,6 +2,8 @@ name: Shivz Daily Brief
 
 on:
   workflow_dispatch:
+  repository_dispatch:
+    types: [daily-brief]
   schedule:
     # 07:17 Africa/Johannesburg. Avoid :00 because GitHub may drop jobs under hourly load.
     - cron: "17 5 * * *"
