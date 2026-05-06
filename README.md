@@ -239,6 +239,69 @@ daily-devotional
 team-shinola-brief
 ```
 
+### External Scheduler Fallback
+
+GitHub's native schedule trigger can be delayed or dropped, so the more reliable setup is:
+
+1. GitHub Actions still does the real work.
+2. An external scheduler sends a tiny HTTPS POST to GitHub at the right time.
+3. GitHub receives that `repository_dispatch` event and starts the matching workflow.
+
+Create a fine-grained GitHub token:
+
+1. GitHub -> Settings -> Developer settings -> Personal access tokens -> Fine-grained tokens.
+2. Generate a new token for only `shivenpillay5-ai/shivz_daily_brief`.
+3. Repository permissions: set `Contents` to `Read and write`.
+4. Copy the token once. Treat it like a password.
+
+Test the trigger locally from PowerShell:
+
+```powershell
+$env:GITHUB_DISPATCH_TOKEN = "paste-token-here"
+.\scripts\trigger_github_dispatch.ps1 -EventType daily-brief
+```
+
+The command should print `Dispatched 'daily-brief'...` and GitHub Actions should show a new `repository_dispatch` run.
+
+Then create three external scheduler jobs. `cron-job.org` is a simple free option that supports custom HTTP methods, headers, body data, test runs, and execution history.
+
+Use this URL for all three jobs:
+
+```text
+https://api.github.com/repos/shivenpillay5-ai/shivz_daily_brief/dispatches
+```
+
+Use method `POST` and these headers:
+
+```text
+Accept: application/vnd.github+json
+Authorization: Bearer YOUR_FINE_GRAINED_GITHUB_TOKEN
+X-GitHub-Api-Version: 2022-11-28
+Content-Type: application/json
+```
+
+Create these request bodies and schedules:
+
+```json
+{"event_type":"daily-brief"}
+```
+
+07:17 Africa/Johannesburg
+
+```json
+{"event_type":"daily-devotional"}
+```
+
+07:29 Africa/Johannesburg
+
+```json
+{"event_type":"team-shinola-brief"}
+```
+
+09:17 Africa/Johannesburg
+
+If the scheduler only accepts UTC, use `05:17`, `05:29`, and `07:17` UTC.
+
 The Team ShiNola workflow needs these repository secrets:
 
 ```text
