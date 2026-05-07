@@ -22,6 +22,9 @@ WHATSAPP_TEMPLATE_PARAMETER_MAX_CHARS = 900
 LIVE_WEATHER_PAGE_URL = (
     "https://shivenpillay5-ai.github.io/shivz_daily_brief/live-weather.html"
 )
+LIVE_MARKETS_PAGE_URL = (
+    "https://shivenpillay5-ai.github.io/shivz_daily_brief/live-markets.html"
+)
 HERO_INTROS = (
     "Weather, world noise, markets, and AI mischief, plated neatly before your inbox starts doing push-ups.",
     "A quick scan of clouds, currencies, headlines, and machines trying very hard to sound clever.",
@@ -480,13 +483,32 @@ def _market_section_html(market_pulse: MarketPulse | None) -> str:
     return f"""
     <div style="margin:30px 0 28px">
       <div style="font-size:13px;color:#4f6f7d;font-weight:700;text-transform:uppercase;letter-spacing:.8px">💸 Market pulse</div>
-      <h2 style="font-size:23px;line-height:1.2;margin:6px 0 4px;color:#102a43">Markets At A Glance</h2>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:6px 0 4px">
+        <tr>
+          <td valign="middle">
+            <h2 style="font-size:23px;line-height:1.2;margin:0;color:#102a43">Markets At A Glance</h2>
+          </td>
+          <td valign="middle" align="right" style="padding-left:10px">
+            {_market_refresh_link_html()}
+          </td>
+        </tr>
+      </table>
       <p style="margin:0 0 14px;color:#627d8a;font-size:14px">Rand crosses, metals, and Brent before the day gets ideas.</p>
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
         <tr>{cards}</tr>
       </table>
     </div>
     """
+
+
+def _market_refresh_link_html() -> str:
+    return (
+        f'<a href="{html.escape(LIVE_MARKETS_PAGE_URL, quote=True)}" '
+        'style="display:inline-block;background:#fff5db;color:#8a5a00;'
+        'border:1px solid #f6d365;border-radius:999px;padding:6px 9px;'
+        'font-size:11px;font-weight:900;text-decoration:none;white-space:nowrap">'
+        "Live markets &#8599;</a>"
+    )
 
 
 def _market_quote_html(quote: MarketQuote) -> str:

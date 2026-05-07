@@ -112,6 +112,10 @@ The weather cards include `Real-time update` links. Those open the static
 `docs/live-weather.html` page in a browser with the region coordinates in the
 URL, then fetch live Open-Meteo data on demand.
 
+The market card includes a `Live markets` link. That opens
+`docs/live-markets.html`, which refreshes USD/ZAR, GBP/ZAR, gold, silver, and
+Brent in the browser.
+
 Send the WhatsApp version:
 
 ```powershell
@@ -234,12 +238,14 @@ Then register the 07:00 task:
 That registers a Windows Scheduled Task named `DailyBriefAgent` to run every day at 07:00.
 Each scheduled run writes a log file into `logs/`.
 
-## Live Weather Page
+## Live Weather And Markets Pages
 
-The `Real-time update` weather buttons use GitHub Pages. The static page lives at:
+The `Real-time update` weather buttons and `Live markets` button use GitHub Pages.
+The static pages live at:
 
 ```text
 docs/live-weather.html
+docs/live-markets.html
 ```
 
 The `Live Weather Page` workflow deploys that folder to GitHub Pages whenever
@@ -250,9 +256,11 @@ After the first successful deploy, the email buttons open:
 
 ```text
 https://shivenpillay5-ai.github.io/shivz_daily_brief/live-weather.html
+https://shivenpillay5-ai.github.io/shivz_daily_brief/live-markets.html
 ```
 
-Each link includes the selected region's name, latitude, longitude, and timezone.
+Each weather link includes the selected region's name, latitude, longitude, and timezone.
+The markets page fetches live/delayed market data directly in the browser.
 
 ## GitHub Actions Scheduling
 

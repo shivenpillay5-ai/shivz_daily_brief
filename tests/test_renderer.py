@@ -251,6 +251,8 @@ class RendererTests(unittest.TestCase):
         self.assertIn("R18.42", body)
         self.assertIn("💵", body)
         self.assertIn("Gold", body)
+        self.assertIn("Live markets &#8599;", body)
+        self.assertIn("live-markets.html", body)
         self.assertIn("🥇", body)
 
     def test_render_html_includes_morning_summary(self) -> None:

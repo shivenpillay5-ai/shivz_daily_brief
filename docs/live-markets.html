@@ -1,0 +1,740 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Live Markets | Shivz Daily Brief</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --page: #edf4f8;
+        --card: #ffffff;
+        --ink: #102a43;
+        --muted: #627d8a;
+        --line: #d9e2ec;
+        --soft: #f8fbfd;
+        --soft-blue: #f3fbfd;
+        --soft-line: #cce8f0;
+        --blue: #184e68;
+        --blue-soft: #d9f0f7;
+        --teal: #1f7a8c;
+        --teal-soft: #e6fffa;
+        --gold: #8a5a00;
+        --gold-soft: #fff5db;
+        --gold-line: #f6d365;
+        --good: #276749;
+        --bad: #9b2c2c;
+        --bad-soft: #fff5f5;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font-family: "Segoe UI", Arial, sans-serif;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      .shell {
+        width: min(760px, calc(100% - 24px));
+        margin: 0 auto;
+        padding: 28px 0 38px;
+      }
+
+      .email-card {
+        overflow: hidden;
+        background: var(--card);
+        border-radius: 22px;
+        box-shadow: 0 18px 45px rgba(27, 55, 73, .16);
+      }
+
+      .hero {
+        background: var(--blue);
+        color: #ffffff;
+        padding: 34px 34px 30px;
+      }
+
+      .hero-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+      }
+
+      .badge {
+        display: inline-block;
+        background: var(--blue-soft);
+        color: var(--blue);
+        border-radius: 999px;
+        padding: 7px 11px;
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+      }
+
+      .date-pill {
+        border: 1px solid rgba(255, 255, 255, .35);
+        border-radius: 14px;
+        padding: 10px 12px;
+        color: #e7f6fb;
+        font-size: 14px;
+        font-weight: 800;
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      .date-pill span {
+        color: #b9e3f2;
+        font-weight: 700;
+      }
+
+      h1 {
+        margin: 14px 0 0;
+        font-size: clamp(34px, 7vw, 48px);
+        line-height: 1.05;
+        letter-spacing: 0;
+      }
+
+      .hero-note {
+        margin: 18px 0 0;
+        max-width: 640px;
+        border-left: 4px solid #b9e3f2;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, .08);
+        padding: 16px 18px;
+        color: #e7f6fb;
+        font-size: 15px;
+        line-height: 1.5;
+      }
+
+      .content {
+        padding: 28px 34px 30px;
+      }
+
+      .action-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 18px;
+      }
+
+      .status {
+        min-height: 18px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      .refresh-button {
+        border: 1px solid var(--gold-line);
+        background: var(--gold-soft);
+        color: var(--gold);
+        border-radius: 999px;
+        padding: 9px 14px;
+        font-size: 13px;
+        font-weight: 900;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      .refresh-button:disabled {
+        cursor: wait;
+        opacity: .68;
+      }
+
+      .section {
+        margin-top: 28px;
+      }
+
+      .section:first-of-type {
+        margin-top: 0;
+      }
+
+      .section-kicker {
+        color: #4f6f7d;
+        font-size: 13px;
+        font-weight: 900;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+      }
+
+      .section-heading {
+        margin: 6px 0 14px;
+        color: var(--ink);
+        font-size: 23px;
+        line-height: 1.2;
+      }
+
+      .market-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .market-grid.commodities {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .market-card {
+        min-height: 154px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--soft);
+        padding: 14px;
+      }
+
+      .market-card.error {
+        border-color: #fed7d7;
+        background: var(--bad-soft);
+      }
+
+      .market-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .market-icon {
+        width: 38px;
+        height: 38px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #ffffff;
+        color: var(--blue);
+        font-size: 12px;
+        font-weight: 1000;
+        letter-spacing: .03em;
+      }
+
+      .market-label {
+        margin: 0;
+        color: var(--ink);
+        font-size: 18px;
+        line-height: 1.2;
+      }
+
+      .market-source {
+        margin-top: 4px;
+        color: #718096;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+      }
+
+      .market-value {
+        margin-top: 14px;
+        color: var(--ink);
+        font-size: 28px;
+        font-weight: 1000;
+        line-height: 1;
+      }
+
+      .change {
+        display: inline-block;
+        margin-top: 10px;
+        border-radius: 999px;
+        padding: 5px 8px;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .change.up {
+        background: var(--teal-soft);
+        color: var(--good);
+      }
+
+      .change.down {
+        background: var(--bad-soft);
+        color: var(--bad);
+      }
+
+      .change.neutral {
+        background: #f7fafc;
+        color: var(--muted);
+      }
+
+      .as-of {
+        margin-top: 9px;
+        color: #7b8794;
+        font-size: 11px;
+        line-height: 1.35;
+      }
+
+      .market-link {
+        display: inline-block;
+        margin-top: 9px;
+        color: var(--teal);
+        font-size: 12px;
+        font-weight: 900;
+        text-decoration: none;
+      }
+
+      .divider {
+        display: grid;
+        grid-template-columns: 56px 1fr;
+        height: 4px;
+        margin: 30px 0;
+      }
+
+      .divider span:first-child {
+        background: var(--teal);
+        border-radius: 999px 0 0 999px;
+      }
+
+      .divider span:last-child {
+        background: var(--soft-line);
+        border-radius: 0 999px 999px 0;
+      }
+
+      .note {
+        margin: 24px 0 0;
+        color: #718096;
+        font-size: 12px;
+        line-height: 1.5;
+        text-align: center;
+      }
+
+      .warning-list {
+        display: none;
+        margin: 16px 0 0;
+        border: 1px solid #fed7d7;
+        border-radius: 12px;
+        background: var(--bad-soft);
+        color: var(--bad);
+        padding: 12px;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .warning-list.visible {
+        display: block;
+      }
+
+      @media (max-width: 700px) {
+        .shell {
+          width: 100%;
+          padding: 0;
+        }
+
+        .email-card {
+          border-radius: 0;
+        }
+
+        .hero,
+        .content {
+          padding-left: 18px;
+          padding-right: 18px;
+        }
+
+        .hero-top,
+        .action-row {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .date-pill {
+          text-align: left;
+        }
+
+        .market-grid,
+        .market-grid.commodities {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <article class="email-card">
+        <header class="hero">
+          <div class="hero-top">
+            <div>
+              <span class="badge">Live markets</span>
+              <h1>Markets At A Glance</h1>
+            </div>
+            <div class="date-pill" id="datePill">Loading<br><span>market board</span></div>
+          </div>
+          <p class="hero-note">
+            Same order as the email, wired live: USD/ZAR, GBP/ZAR, gold, silver,
+            and Brent. Delayed source data, cleanly refreshed when you need a
+            fresh market pulse.
+          </p>
+        </header>
+
+        <main class="content">
+          <div class="action-row">
+            <div class="status" id="status">Fetching the latest market pulse...</div>
+            <button class="refresh-button" id="refreshButton" type="button">Refresh now</button>
+          </div>
+
+          <section class="section">
+            <div class="section-kicker">Market pulse</div>
+            <h2 class="section-heading">Rand Crosses</h2>
+            <div class="market-grid" id="fxGrid"></div>
+          </section>
+
+          <div class="divider" aria-hidden="true"><span></span><span></span></div>
+
+          <section class="section">
+            <div class="section-kicker">Commodities</div>
+            <h2 class="section-heading">Metals And Brent</h2>
+            <div class="market-grid commodities" id="commodityGrid"></div>
+          </section>
+
+          <div class="warning-list" id="warningList"></div>
+
+          <p class="note">
+            Data from Frankfurter and Yahoo Finance delayed chart feeds. This is
+            a morning signal, not financial advice.
+          </p>
+        </main>
+      </article>
+    </div>
+
+    <script>
+      const FRANKFURTER_API_ROOT = "https://api.frankfurter.dev/v1";
+      const YAHOO_CHART_BASE_URL = "https://query1.finance.yahoo.com/v8/finance/chart";
+
+      const QUOTES = [
+        {
+          label: "USD/ZAR",
+          kind: "fx",
+          icon: "USD",
+          base: "USD",
+          quote: "ZAR",
+          prefix: "R",
+          suffix: "",
+          decimals: 2,
+          source: "Frankfurter",
+          externalUrl: "https://www.google.com/finance/quote/USD-ZAR"
+        },
+        {
+          label: "GBP/ZAR",
+          kind: "fx",
+          icon: "GBP",
+          base: "GBP",
+          quote: "ZAR",
+          prefix: "R",
+          suffix: "",
+          decimals: 2,
+          source: "Frankfurter",
+          externalUrl: "https://www.google.com/finance/quote/GBP-ZAR"
+        },
+        {
+          label: "Gold",
+          kind: "commodity",
+          icon: "Au",
+          symbol: "GC=F",
+          prefix: "$",
+          suffix: "/oz",
+          decimals: 2,
+          source: "Yahoo Finance delayed futures",
+          externalUrl: "https://finance.yahoo.com/quote/GC=F"
+        },
+        {
+          label: "Silver",
+          kind: "commodity",
+          icon: "Ag",
+          symbol: "SI=F",
+          prefix: "$",
+          suffix: "/oz",
+          decimals: 2,
+          source: "Yahoo Finance delayed futures",
+          externalUrl: "https://finance.yahoo.com/quote/SI=F"
+        },
+        {
+          label: "Brent",
+          kind: "commodity",
+          icon: "Oil",
+          symbol: "BZ=F",
+          prefix: "$",
+          suffix: "/bbl",
+          decimals: 2,
+          source: "Yahoo Finance delayed futures",
+          externalUrl: "https://finance.yahoo.com/quote/BZ=F"
+        }
+      ];
+
+      const fxGrid = document.getElementById("fxGrid");
+      const commodityGrid = document.getElementById("commodityGrid");
+      const refreshButton = document.getElementById("refreshButton");
+      const statusEl = document.getElementById("status");
+      const datePill = document.getElementById("datePill");
+      const warningList = document.getElementById("warningList");
+
+      document.addEventListener("DOMContentLoaded", () => {
+        setDatePill(new Date());
+        renderQuotes(QUOTES.map((quote) => ({ ...quote, loading: true })));
+        refreshMarkets();
+        refreshButton.addEventListener("click", refreshMarkets);
+      });
+
+      async function refreshMarkets() {
+        refreshButton.disabled = true;
+        statusEl.textContent = "Fetching the latest market pulse...";
+        setDatePill(new Date());
+
+        const results = await Promise.all(QUOTES.map(fetchQuote));
+        renderQuotes(results);
+
+        const failures = results.filter((quote) => quote.error);
+        const updated = new Date();
+        statusEl.textContent = failures.length
+          ? `Updated ${formatLocalDateTime(updated)} with ${failures.length} feed issue${failures.length === 1 ? "" : "s"}.`
+          : `Updated ${formatLocalDateTime(updated)}.`;
+        refreshButton.disabled = false;
+      }
+
+      async function fetchQuote(quote) {
+        try {
+          if (quote.kind === "fx") {
+            return await fetchFxQuote(quote);
+          }
+          return await fetchYahooQuote(quote);
+        } catch (error) {
+          return {
+            ...quote,
+            value: null,
+            changePercent: null,
+            asOf: "",
+            error: error instanceof Error ? error.message : "feed unavailable"
+          };
+        }
+      }
+
+      async function fetchFxQuote(quote) {
+        const query = new URLSearchParams({
+          base: quote.base,
+          symbols: quote.quote
+        });
+        const latest = await fetchJson(`${FRANKFURTER_API_ROOT}/latest?${query}`);
+        const value = Number(latest.rates?.[quote.quote]);
+        if (!Number.isFinite(value)) {
+          throw new Error("rate unavailable");
+        }
+
+        let changePercent = null;
+        try {
+          const previous = await fetchPreviousFxRate(quote, latest.date);
+          changePercent = calculateChange(value, previous);
+        } catch {
+          changePercent = null;
+        }
+
+        return {
+          ...quote,
+          value,
+          changePercent,
+          asOf: latest.date || "Latest available"
+        };
+      }
+
+      async function fetchPreviousFxRate(quote, latestDate) {
+        if (!latestDate) {
+          throw new Error("latest date unavailable");
+        }
+
+        const startDate = offsetDate(latestDate, -10);
+        const query = new URLSearchParams({
+          base: quote.base,
+          symbols: quote.quote
+        });
+        const history = await fetchJson(`${FRANKFURTER_API_ROOT}/${startDate}..${latestDate}?${query}`);
+        const rates = history.rates || {};
+        const previousDates = Object.keys(rates)
+          .filter((date) => date < latestDate)
+          .sort();
+
+        if (!previousDates.length) {
+          throw new Error("previous rate unavailable");
+        }
+
+        return Number(rates[previousDates[previousDates.length - 1]]?.[quote.quote]);
+      }
+
+      async function fetchYahooQuote(quote) {
+        const data = await fetchJson(`${YAHOO_CHART_BASE_URL}/${encodeURIComponent(quote.symbol)}?range=1d&interval=1d`);
+        const result = data.chart?.result?.[0];
+        const meta = result?.meta || {};
+        const value = firstNumber(
+          meta.regularMarketPrice,
+          meta.previousClose,
+          meta.chartPreviousClose
+        );
+        const previousClose = firstNumberOrNull(
+          meta.previousClose,
+          meta.chartPreviousClose
+        );
+
+        return {
+          ...quote,
+          value,
+          changePercent: calculateChange(value, previousClose),
+          asOf: formatMarketTime(meta.regularMarketTime)
+        };
+      }
+
+      async function fetchJson(url) {
+        const response = await fetch(url, { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+      }
+
+      function renderQuotes(quotes) {
+        fxGrid.innerHTML = quotes
+          .filter((quote) => quote.kind === "fx")
+          .map(renderMarketCard)
+          .join("");
+        commodityGrid.innerHTML = quotes
+          .filter((quote) => quote.kind === "commodity")
+          .map(renderMarketCard)
+          .join("");
+
+        const warnings = quotes.filter((quote) => quote.error);
+        warningList.classList.toggle("visible", warnings.length > 0);
+        warningList.innerHTML = warnings.length
+          ? warnings.map((quote) => `<div>${escapeHtml(quote.label)}: ${escapeHtml(quote.error)}</div>`).join("")
+          : "";
+      }
+
+      function renderMarketCard(quote) {
+        const stateClass = quote.error ? "error" : "";
+        const value = quote.loading ? "Loading" : formatValue(quote);
+        const change = quote.loading ? renderNeutral("Checking feed") : renderChange(quote.changePercent);
+        const asOf = quote.loading
+          ? "Source refresh in progress"
+          : quote.error
+            ? "Delayed feed did not respond"
+            : quote.asOf || "Latest available";
+
+        return `
+          <article class="market-card ${stateClass}">
+            <div class="market-top">
+              <div>
+                <h3 class="market-label">${escapeHtml(quote.label)}</h3>
+                <div class="market-source">${escapeHtml(quote.source)}</div>
+              </div>
+              <div class="market-icon">${escapeHtml(quote.icon)}</div>
+            </div>
+            <div class="market-value">${escapeHtml(value)}</div>
+            ${change}
+            <div class="as-of">${escapeHtml(asOf)}</div>
+            <a class="market-link" href="${escapeHtml(quote.externalUrl)}" target="_blank" rel="noopener">Open source &#8599;</a>
+          </article>
+        `;
+      }
+
+      function renderChange(changePercent) {
+        if (!Number.isFinite(changePercent)) {
+          return renderNeutral("Move unavailable");
+        }
+        const direction = changePercent >= 0 ? "up" : "down";
+        const arrow = changePercent >= 0 ? "&uarr;" : "&darr;";
+        return `<span class="change ${direction}">${arrow} ${Math.abs(changePercent).toFixed(1)}%</span>`;
+      }
+
+      function renderNeutral(label) {
+        return `<span class="change neutral">${escapeHtml(label)}</span>`;
+      }
+
+      function formatValue(quote) {
+        if (!Number.isFinite(quote.value)) {
+          return "Unavailable";
+        }
+        return `${quote.prefix}${quote.value.toLocaleString("en-ZA", {
+          minimumFractionDigits: quote.decimals,
+          maximumFractionDigits: quote.decimals
+        })}${quote.suffix}`;
+      }
+
+      function calculateChange(current, previous) {
+        if (!Number.isFinite(current) || !Number.isFinite(previous) || previous === 0) {
+          return null;
+        }
+        return ((current - previous) / previous) * 100;
+      }
+
+      function firstNumber(...values) {
+        const value = firstNumberOrNull(...values);
+        if (value === null) {
+          throw new Error("market price unavailable");
+        }
+        return value;
+      }
+
+      function firstNumberOrNull(...values) {
+        for (const value of values) {
+          if (Number.isFinite(value)) {
+            return Number(value);
+          }
+        }
+        return null;
+      }
+
+      function formatMarketTime(rawTimestamp) {
+        if (!Number.isFinite(rawTimestamp)) {
+          return "";
+        }
+        const value = new Date(rawTimestamp * 1000).toLocaleString("en-ZA", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: "UTC"
+        });
+        return `${value} UTC`;
+      }
+
+      function formatLocalDateTime(date) {
+        return date.toLocaleString("en-ZA", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+      }
+
+      function setDatePill(date) {
+        datePill.innerHTML = `${date.toLocaleDateString("en-ZA", {
+          weekday: "long"
+        })}<br><span>${date.toLocaleDateString("en-ZA", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric"
+        })}</span>`;
+      }
+
+      function offsetDate(dateString, days) {
+        const date = new Date(`${dateString}T00:00:00Z`);
+        date.setUTCDate(date.getUTCDate() + days);
+        return date.toISOString().slice(0, 10);
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+    </script>
+  </body>
+</html>
