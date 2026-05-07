@@ -30,6 +30,7 @@ from daily_brief.tools.rendering import (
     render_whatsapp_template_parameters,
     render_whatsapp_text,
 )
+from daily_brief.tools.story_enrichment import enrich_story_summaries
 from daily_brief.tools.summary import write_morning_summary
 from daily_brief.tools.weather import fetch_weather
 from daily_brief.tools.whatsapp import send_whatsapp_message, send_whatsapp_template
@@ -109,6 +110,10 @@ class DailyBriefAgent:
             config=self.config,
             use_openai=use_openai,
         )
+
+        print("Enriching story summaries...")
+        world_ranked = enrich_story_summaries(world_ranked)
+        ai_tech_ranked = enrich_story_summaries(ai_tech_ranked)
 
         print("Writing morning summary...")
         morning_summary = write_morning_summary(

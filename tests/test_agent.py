@@ -34,10 +34,12 @@ class AgentTests(unittest.TestCase):
     @patch("daily_brief.agent.fetch_market_pulse")
     @patch("daily_brief.agent.fetch_feed_items")
     @patch("daily_brief.agent.rank_items")
+    @patch("daily_brief.agent.enrich_story_summaries")
     @patch("daily_brief.agent.write_morning_summary")
     def test_agent_builds_brief(
         self,
         write_morning_summary_mock,
+        enrich_story_summaries_mock,
         rank_items_mock,
         fetch_feed_items_mock,
         fetch_market_pulse_mock,
@@ -80,6 +82,7 @@ class AgentTests(unittest.TestCase):
                 summary="Summary",
             )
         ]
+        enrich_story_summaries_mock.side_effect = lambda items: items
 
         brief = DailyBriefAgent(_config()).build(
             brief_date=__import__("datetime").datetime(2026, 5, 4),
@@ -96,6 +99,7 @@ class AgentTests(unittest.TestCase):
         self.assertIn("Story", brief.whatsapp_template_parameters[2])
         self.assertIn("USD/ZAR", brief.text_body)
         self.assertIn("Morning Signal", brief.html_body)
+        self.assertEqual(enrich_story_summaries_mock.call_count, 2)
 
     @patch("daily_brief.agent.build_daily_devotional")
     def test_agent_builds_devotional_brief(self, build_daily_devotional_mock) -> None:

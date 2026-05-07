@@ -17,9 +17,12 @@ class LiveMarketsPageTests(unittest.TestCase):
         self.assertLess(quote_config.index("Gold"), quote_config.index("Silver"))
         self.assertLess(quote_config.index("Silver"), quote_config.index("Brent"))
         self.assertIn("api.frankfurter.dev", page)
-        self.assertIn("query1.finance.yahoo.com", page)
+        self.assertIn("api.gold-api.com", page)
+        self.assertIn("api.oilpriceapi.com", page)
         self.assertIn("function fetchFxQuote", page)
-        self.assertIn("function fetchYahooQuote", page)
+        self.assertIn("function fetchMetalQuote", page)
+        self.assertIn("function fetchOilQuote", page)
+        self.assertNotIn("query1.finance.yahoo.com", page)
         self.assertIn("Refresh now", page)
 
 

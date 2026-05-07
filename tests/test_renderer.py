@@ -86,7 +86,7 @@ class RendererTests(unittest.TestCase):
         self.assertIn("Read story", body)
         self.assertIn("https://example.com/world", body)
 
-    def test_render_html_gives_story_summaries_five_line_digest_space(self) -> None:
+    def test_render_html_keeps_story_digest_space_adaptive(self) -> None:
         weather = _weather("Johannesburg")
         item = RankedItem(
             title="Detailed story",
@@ -104,7 +104,7 @@ class RendererTests(unittest.TestCase):
 
         self.assertIn("line-height:1.55", body)
         self.assertIn("border-left:3px solid #cce8f0", body)
-        self.assertIn("min-height:109px", body)
+        self.assertNotIn("min-height:109px", body)
 
     def test_render_html_rotates_hero_intro_by_date(self) -> None:
         weather = _weather("Johannesburg")

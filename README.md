@@ -114,7 +114,11 @@ URL, then fetch live Open-Meteo data on demand.
 
 The market card includes a `Live markets` link. That opens
 `docs/live-markets.html`, which refreshes USD/ZAR, GBP/ZAR, gold, silver, and
-Brent in the browser.
+Brent in the browser using browser-safe market feeds.
+
+Thin RSS story summaries are best-effort enriched from the linked article page
+before the email is rendered. If a site blocks the fetch, the original feed
+summary is used and the card collapses naturally.
 
 Send the WhatsApp version:
 
@@ -260,7 +264,8 @@ https://shivenpillay5-ai.github.io/shivz_daily_brief/live-markets.html
 ```
 
 Each weather link includes the selected region's name, latitude, longitude, and timezone.
-The markets page fetches live/delayed market data directly in the browser.
+The markets page fetches live/delayed market data directly in the browser from
+Frankfurter, Gold API, and OilPriceAPI's no-key demo feed.
 
 ## GitHub Actions Scheduling
 
@@ -471,7 +476,7 @@ WHATSAPP_TEMPLATE_LANGUAGE=en
 
 Feed lists are semicolon-separated. Each entry is `Name|URL`.
 
-The market pulse uses Frankfurter for exchange rates and Yahoo Finance's delayed chart data for commodity futures. It is a morning signal, not financial advice.
+The email market pulse uses Frankfurter for exchange rates and Yahoo Finance's delayed chart data for commodity futures. The live browser page uses Frankfurter, Gold API, and OilPriceAPI instead because Yahoo's chart endpoint is not browser-CORS friendly. It is a morning signal, not financial advice.
 
 ## Test
 

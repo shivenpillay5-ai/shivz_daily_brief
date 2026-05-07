@@ -397,7 +397,7 @@
           <div class="warning-list" id="warningList"></div>
 
           <p class="note">
-            Data from Frankfurter and Yahoo Finance delayed chart feeds. This is
+            Data from Frankfurter, Gold API, and OilPriceAPI demo feeds. This is
             a morning signal, not financial advice.
           </p>
         </main>
@@ -406,7 +406,8 @@
 
     <script>
       const FRANKFURTER_API_ROOT = "https://api.frankfurter.dev/v1";
-      const YAHOO_CHART_BASE_URL = "https://query1.finance.yahoo.com/v8/finance/chart";
+      const GOLD_API_ROOT = "https://api.gold-api.com";
+      const OIL_PRICE_DEMO_URL = "https://api.oilpriceapi.com/v1/demo/prices";
 
       const QUOTES = [
         {
@@ -435,36 +436,36 @@
         },
         {
           label: "Gold",
-          kind: "commodity",
+          kind: "metal",
           icon: "Au",
-          symbol: "GC=F",
+          symbol: "XAU",
           prefix: "$",
           suffix: "/oz",
           decimals: 2,
-          source: "Yahoo Finance delayed futures",
-          externalUrl: "https://finance.yahoo.com/quote/GC=F"
+          source: "Gold API",
+          externalUrl: "https://gold-api.com/assets/"
         },
         {
           label: "Silver",
-          kind: "commodity",
+          kind: "metal",
           icon: "Ag",
-          symbol: "SI=F",
+          symbol: "XAG",
           prefix: "$",
           suffix: "/oz",
           decimals: 2,
-          source: "Yahoo Finance delayed futures",
-          externalUrl: "https://finance.yahoo.com/quote/SI=F"
+          source: "Gold API",
+          externalUrl: "https://gold-api.com/assets/"
         },
         {
           label: "Brent",
-          kind: "commodity",
+          kind: "oil",
           icon: "Oil",
-          symbol: "BZ=F",
+          code: "BRENT_CRUDE_USD",
           prefix: "$",
           suffix: "/bbl",
           decimals: 2,
-          source: "Yahoo Finance delayed futures",
-          externalUrl: "https://finance.yahoo.com/quote/BZ=F"
+          source: "OilPriceAPI demo",
+          externalUrl: "https://www.oilpriceapi.com/playground"
         }
       ];
 
@@ -503,7 +504,10 @@
           if (quote.kind === "fx") {
             return await fetchFxQuote(quote);
           }
-          return await fetchYahooQuote(quote);
+          if (quote.kind === "metal") {
+            return await fetchMetalQuote(quote);
+          }
+          return await fetchOilQuote(quote);
         } catch (error) {
           return {
             ...quote,
@@ -565,25 +569,35 @@
         return Number(rates[previousDates[previousDates.length - 1]]?.[quote.quote]);
       }
 
-      async function fetchYahooQuote(quote) {
-        const data = await fetchJson(`${YAHOO_CHART_BASE_URL}/${encodeURIComponent(quote.symbol)}?range=1d&interval=1d`);
-        const result = data.chart?.result?.[0];
-        const meta = result?.meta || {};
-        const value = firstNumber(
-          meta.regularMarketPrice,
-          meta.previousClose,
-          meta.chartPreviousClose
-        );
-        const previousClose = firstNumberOrNull(
-          meta.previousClose,
-          meta.chartPreviousClose
-        );
+      async function fetchMetalQuote(quote) {
+        const data = await fetchJson(`${GOLD_API_ROOT}/price/${quote.symbol}`);
+        const value = Number(data.price);
+        if (!Number.isFinite(value)) {
+          throw new Error("metal price unavailable");
+        }
 
         return {
           ...quote,
           value,
-          changePercent: calculateChange(value, previousClose),
-          asOf: formatMarketTime(meta.regularMarketTime)
+          changePercent: null,
+          asOf: formatIsoTime(data.updatedAt) || data.updatedAtReadable || "Latest available"
+        };
+      }
+
+      async function fetchOilQuote(quote) {
+        const data = await fetchJson(OIL_PRICE_DEMO_URL);
+        const prices = data.data?.prices || [];
+        const match = prices.find((price) => price.code === quote.code);
+        const value = Number(match?.price);
+        if (!Number.isFinite(value)) {
+          throw new Error("Brent price unavailable");
+        }
+
+        return {
+          ...quote,
+          value,
+          changePercent: Number(match.change_24h),
+          asOf: formatIsoTime(match.updated_at)
         };
       }
 
@@ -601,7 +615,7 @@
           .map(renderMarketCard)
           .join("");
         commodityGrid.innerHTML = quotes
-          .filter((quote) => quote.kind === "commodity")
+          .filter((quote) => quote.kind !== "fx")
           .map(renderMarketCard)
           .join("");
 
@@ -669,28 +683,15 @@
         return ((current - previous) / previous) * 100;
       }
 
-      function firstNumber(...values) {
-        const value = firstNumberOrNull(...values);
-        if (value === null) {
-          throw new Error("market price unavailable");
-        }
-        return value;
-      }
-
-      function firstNumberOrNull(...values) {
-        for (const value of values) {
-          if (Number.isFinite(value)) {
-            return Number(value);
-          }
-        }
-        return null;
-      }
-
-      function formatMarketTime(rawTimestamp) {
-        if (!Number.isFinite(rawTimestamp)) {
+      function formatIsoTime(value) {
+        if (!value) {
           return "";
         }
-        const value = new Date(rawTimestamp * 1000).toLocaleString("en-ZA", {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+          return "";
+        }
+        const formatted = date.toLocaleString("en-ZA", {
           day: "2-digit",
           month: "short",
           year: "numeric",
@@ -698,7 +699,7 @@
           minute: "2-digit",
           timeZone: "UTC"
         });
-        return `${value} UTC`;
+        return `${formatted} UTC`;
       }
 
       function formatLocalDateTime(date) {

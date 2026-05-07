@@ -451,7 +451,7 @@ def _story_list_html(items: list[RankedItem]) -> str:
                     <td style="padding:16px">
                       <div style="font-size:12px;color:#607d8b;font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px">{html.escape(item.source)}</div>
                       <a href="{html.escape(item.url)}" style="font-size:18px;line-height:1.28;color:#0b3954;text-decoration:none;font-weight:800">{html.escape(item.title)}</a>
-                      <p style="font-size:14px;line-height:1.55;color:#334e68;margin:10px 0 14px;padding-left:12px;border-left:3px solid #cce8f0;min-height:109px">{html.escape(_shorten(item.summary))}</p>
+                      <p style="font-size:14px;line-height:1.55;color:#334e68;margin:9px 0 12px;padding:0 0 0 12px;border-left:3px solid #cce8f0">{html.escape(_shorten(item.summary))}</p>
                       <a href="{html.escape(item.url)}" style="display:inline-block;background:#1f7a8c;color:#ffffff;text-decoration:none;padding:9px 13px;border-radius:999px;font-size:13px;font-weight:700">Read story →</a>
                     </td>
                   </tr>
