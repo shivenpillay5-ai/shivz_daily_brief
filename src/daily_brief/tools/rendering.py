@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 from datetime import datetime
+from urllib.parse import urlencode
 
 from daily_brief.models import (
     HourlyForecast,
@@ -18,6 +19,41 @@ from daily_brief.models import (
 SUMMARY_MAX_CHARS = 360
 BRIEF_NAME = "Shivz Daily Brief"
 WHATSAPP_TEMPLATE_PARAMETER_MAX_CHARS = 900
+LIVE_WEATHER_PAGE_URL = (
+    "https://shivenpillay5-ai.github.io/shivz_daily_brief/live-weather.html"
+)
+HERO_INTROS = (
+    "Weather, world noise, markets, and AI mischief, plated neatly before your inbox starts doing push-ups.",
+    "A quick scan of clouds, currencies, headlines, and machines trying very hard to sound clever.",
+    "Today's dashboard: sky mood, money mood, world mood, and the robots quietly rearranging the furniture.",
+    "Your morning sampler of weather, markets, global plot twists, and AI doing its little jazz hands routine.",
+    "Forecasts, finance, world wobble, and AI sparks, all stirred together before the day finds its shoes.",
+    "A tidy little briefing on the sky, the rand, the headlines, and whatever AI has decided to be today.",
+    "Weather first, markets second, world drama third, and AI somewhere nearby wearing a confident blazer.",
+    "The morning board is open: clouds are voting, markets are blinking, and the news is clearing its throat.",
+    "A cheerful skim through weather, money, global commotion, and AI news before the calendar gets ambitious.",
+    "Sky report, market pulse, world circus, AI sparks, brewed strong enough to face the first meeting.",
+    "Your compact morning briefing, lightly caffeinated and mostly well-behaved.",
+    "Clouds, currency, headlines, and clever machines, lined up neatly so your brain can arrive gently.",
+    "A small tray of sky gossip, rand activity, world headlines, and AI doing its best impression of progress.",
+    "Weather is reporting in, markets are stretching, and the headlines have already found the drama drawer.",
+    "Clouds, markets, world news, and AI signals, sorted before the inbox starts using its outside voice.",
+    "Your morning control panel, featuring sky updates, money wiggles, global noise, and robot sparkle.",
+    "Forecasts, finance, headlines, and AI oddities, arranged neatly enough to pass as adult supervision.",
+    "A brisk scan of the sky, the market board, the planet, and the software pretending it has a plan.",
+    "Weather, money, world plotlines, and AI sparks, served with just enough seriousness to be useful.",
+    "A tidy morning skim before the day starts asking follow-up questions.",
+    "The sky has notes, the markets have feelings, and the news has apparently chosen momentum.",
+    "A pocket-sized command center for weather, markets, world happenings, and AI's latest confidence trick.",
+    "Today's opening act: clouds, currencies, headlines, and clever machines trying not to look busy.",
+    "Your morning radar, sweeping weather, rand moves, world noise, and AI signals in one polite pass.",
+    "Weather and markets are awake, world news is pacing, and AI has entered with a spreadsheet.",
+    "A cheerful status check on the sky, the rand, the headlines, and the machines making headlines.",
+    "The day begins with weather clues, market nudges, global static, and AI doing jazz hands near a server.",
+    "A smart little morning scan, lightly roasted and ready before the first notification gets ambitious.",
+    "Clouds are clocking in, markets are blinking, and the headlines brought their own soundtrack.",
+    "Your daily starter pack: sky mood, market pulse, world wobble, and AI sparkle.",
+)
 
 
 def render_text(
@@ -73,11 +109,12 @@ def render_html(
     market_pulse: MarketPulse | None = None,
     warnings: list[str] | None = None,
 ) -> str:
+    hero_intro = _hero_intro(brief_date)
     return f"""<!doctype html>
 <html lang="en">
   <body style="margin:0;padding:0;background:#edf4f8;font-family:Segoe UI,Arial,sans-serif;color:#202124">
     <div style="display:none;max-height:0;overflow:hidden;color:#edf4f8">
-      {BRIEF_NAME}: weather, market pulse, world news, and AI stories for {brief_date:%A, %d %B %Y}.
+      {html.escape(hero_intro, quote=False)}
     </div>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#edf4f8">
       <tr>
@@ -104,7 +141,7 @@ def render_html(
                       </table>
                       <div style="margin-top:20px;padding:16px 18px;border-left:4px solid #b9e3f2;background:rgba(255,255,255,.08);border-radius:14px">
                         <p style="font-size:15px;line-height:1.5;margin:0;color:#e7f6fb">
-                          Weather, world chaos, and AI plot twists, lightly toasted and served before your inbox starts making demands.
+                          {html.escape(hero_intro, quote=False)}
                         </p>
                       </div>
                     </td>
@@ -134,6 +171,10 @@ def render_html(
     </table>
   </body>
 </html>"""
+
+
+def _hero_intro(brief_date: datetime) -> str:
+    return HERO_INTROS[brief_date.toordinal() % len(HERO_INTROS)]
 
 
 def render_whatsapp_text(
@@ -349,7 +390,7 @@ def _weather_lines(weather_reports: list[WeatherReport]) -> list[str]:
                 lines.append(
                     "   "
                     f"{forecast.time_label}: "
-                    f"{_condition_emoji_for_condition(forecast.condition)} "
+                    f"{_hourly_condition_emoji(forecast)} "
                     f"{_format_value(forecast.temperature_c, 'C')}, "
                     f"rain {_format_value(forecast.precipitation_probability_percent, '%')}"
                 )
@@ -518,12 +559,22 @@ def _weather_card_html(weather: WeatherReport, featured: bool) -> str:
     card_background = "#f3fbfd" if featured else "#fbfdfe"
     title_size = "26px" if featured else "22px"
     padding = "24px" if featured else "20px"
+    refresh_html = _weather_refresh_link_html(weather)
 
     return f"""
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:12px;border-radius:18px;background:{card_background};border:1px solid #cce8f0">
       <tr>
         <td style="padding:{padding}">
-          <h2 style="font-size:{title_size};line-height:1.2;margin:0 0 4px;color:#102a43">{html.escape(weather.location_name)}</h2>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 4px">
+            <tr>
+              <td valign="middle">
+                <h2 style="font-size:{title_size};line-height:1.2;margin:0;color:#102a43">{html.escape(weather.location_name)}</h2>
+              </td>
+              <td valign="middle" align="right" style="padding-left:10px">
+                {refresh_html}
+              </td>
+            </tr>
+          </table>
           <p style="font-size:15px;line-height:1.5;margin:0 0 8px;color:#334e68">{condition_emoji} {html.escape(weather.condition.title())}</p>
           <p style="font-size:14px;line-height:1.5;margin:0 0 16px;color:#486581">{html.escape(_weather_mood(weather))}</p>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
@@ -542,32 +593,79 @@ def _weather_card_html(weather: WeatherReport, featured: bool) -> str:
     """
 
 
+def _weather_refresh_link_html(weather: WeatherReport) -> str:
+    url = _weather_realtime_url(weather)
+    return (
+        f'<a href="{html.escape(url, quote=True)}" '
+        'style="display:inline-block;background:#e6fffa;color:#1f7a8c;'
+        'border:1px solid #b2f5ea;border-radius:999px;padding:6px 9px;'
+        'font-size:11px;font-weight:900;text-decoration:none;white-space:nowrap">'
+        "Real-time update &#8599;</a>"
+    )
+
+
+def _weather_realtime_url(weather: WeatherReport) -> str:
+    if weather.latitude is None or weather.longitude is None:
+        return "https://www.google.com/search?" + urlencode(
+            {"q": f"weather {weather.location_name}"}
+        )
+
+    query = urlencode(
+        {
+            "name": weather.location_name,
+            "lat": f"{weather.latitude:.4f}",
+            "lon": f"{weather.longitude:.4f}",
+            "timezone": weather.timezone or "auto",
+        }
+    )
+    return f"{LIVE_WEATHER_PAGE_URL}?{query}"
+
+
 def _hourly_html(hourly: list[HourlyForecast]) -> str:
     if not hourly:
         return ""
 
     entries = []
     for forecast in hourly:
+        tile_background, tile_border, time_color, value_color, meta_color = (
+            _hourly_tile_colors(forecast)
+        )
         entries.append(
             f"""
-            <td style="padding:4px 6px 4px 0">
-              <div style="background:#ffffff;border-radius:12px;border:1px solid #d9e2ec;padding:10px 9px;text-align:center">
-                <div style="font-size:11px;color:#718096;font-weight:800">{html.escape(forecast.time_label)}</div>
-                <div style="font-size:18px;line-height:1;margin:6px 0">{_condition_emoji_for_condition(forecast.condition)}</div>
-                <div style="font-size:15px;color:#102a43;font-weight:800">{html.escape(_format_value(forecast.temperature_c, "C"))}</div>
-                <div style="font-size:11px;color:#627d8a;margin-top:3px">☔ {html.escape(_format_value(forecast.precipitation_probability_percent, "%"))}</div>
+            <td valign="top" style="width:8.33%;padding:2px">
+              <div style="background:{tile_background};border-radius:7px;border:1px solid {tile_border};padding:4px 2px;text-align:center">
+                <div style="font-size:8px;color:{time_color};font-weight:900;letter-spacing:.1px">{html.escape(forecast.time_label)}</div>
+                <div style="font-size:12px;line-height:1;margin:3px 0">{_hourly_condition_emoji(forecast)}</div>
+                <div style="font-size:11px;color:{value_color};font-weight:900">{html.escape(_format_value(forecast.temperature_c, "C"))}</div>
+                <div style="font-size:8px;color:{meta_color};margin-top:1px">☔ {html.escape(_format_value(forecast.precipitation_probability_percent, "%"))}</div>
               </div>
             </td>
             """
         )
 
+    rows = _hourly_rows_html(entries)
+
     return f"""
     <div style="height:14px"></div>
-    <div style="font-size:12px;color:#4f6f7d;font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px">Next few hours</div>
+    <div style="font-size:12px;color:#4f6f7d;font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px">Next 24 hours</div>
+    <div style="font-size:12px;color:#627d8a;margin-bottom:7px">05:00 today to 04:00 tomorrow</div>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-      <tr>{''.join(entries)}</tr>
+      {rows}
     </table>
     """
+
+
+def _hourly_rows_html(entries: list[str], columns: int = 12) -> str:
+    rows = []
+    for index in range(0, len(entries), columns):
+        rows.append(f"<tr>{''.join(entries[index : index + columns])}</tr>")
+    return "".join(rows)
+
+
+def _hourly_tile_colors(forecast: HourlyForecast) -> tuple[str, str, str, str, str]:
+    if _is_night_hour(forecast.time_label):
+        return ("#eef5ff", "#b8c7df", "#4f6f95", "#17324f", "#5d7492")
+    return ("#ffffff", "#d9e2ec", "#718096", "#102a43", "#627d8a")
 
 
 def _metric_html(label: str, value: str) -> str:
@@ -600,7 +698,14 @@ def _condition_emoji(weather: WeatherReport) -> str:
     return _condition_emoji_for_condition(weather.condition)
 
 
-def _condition_emoji_for_condition(condition_text: str) -> str:
+def _hourly_condition_emoji(forecast: HourlyForecast) -> str:
+    return _condition_emoji_for_condition(
+        forecast.condition,
+        is_night=_is_night_hour(forecast.time_label),
+    )
+
+
+def _condition_emoji_for_condition(condition_text: str, is_night: bool = False) -> str:
     condition = condition_text.lower()
     if "thunder" in condition:
         return "⛈️"
@@ -610,11 +715,29 @@ def _condition_emoji_for_condition(condition_text: str) -> str:
         return "❄️"
     if "fog" in condition:
         return "🌫️"
+    if "mainly clear" in condition:
+        if is_night:
+            return "🌙"
+        return "🌤️"
     if "clear" in condition:
+        if is_night:
+            return "🌙"
         return "☀️"
+    if "partly" in condition:
+        if is_night:
+            return "☁️"
+        return "⛅"
     if "cloud" in condition or "overcast" in condition:
         return "☁️"
     return "🌤️"
+
+
+def _is_night_hour(time_label: str) -> bool:
+    try:
+        hour = int(time_label.split(":", 1)[0])
+    except (ValueError, IndexError):
+        return False
+    return hour < 6 or hour >= 18
 
 
 def _temperature_emoji(weather: WeatherReport) -> str:

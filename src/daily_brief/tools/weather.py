@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """Weather tool used by DailyBriefAgent."""
 
-from datetime import datetime
+from datetime import datetime, time, timedelta
 from urllib.parse import urlencode
 
 from daily_brief.config import LocationConfig
@@ -11,6 +11,8 @@ from daily_brief.models import HourlyForecast, WeatherReport
 
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
+HOURLY_WINDOW_START_HOUR = 5
+HOURLY_WINDOW_HOURS = 24
 
 
 WEATHER_CODES = {
@@ -38,7 +40,10 @@ WEATHER_CODES = {
 }
 
 
-def fetch_weather(location: LocationConfig, hourly_hours: int = 8) -> WeatherReport:
+def fetch_weather(
+    location: LocationConfig,
+    hourly_hours: int = HOURLY_WINDOW_HOURS,
+) -> WeatherReport:
     hourly_variables = [
         "temperature_2m",
         "apparent_temperature",
@@ -49,7 +54,7 @@ def fetch_weather(location: LocationConfig, hourly_hours: int = 8) -> WeatherRep
         "latitude": location.latitude,
         "longitude": location.longitude,
         "timezone": location.timezone,
-        "forecast_days": 1,
+        "forecast_days": 2 if location.hourly else 1,
         "current": ",".join(
             [
                 "temperature_2m",
@@ -91,13 +96,16 @@ def fetch_weather(location: LocationConfig, hourly_hours: int = 8) -> WeatherRep
             daily.get("precipitation_probability_max")
         ),
         condition=WEATHER_CODES.get(code, "conditions unavailable"),
-        hourly=_parse_hourly(data.get("hourly", {}), limit=hourly_hours)
+        latitude=location.latitude,
+        longitude=location.longitude,
+        timezone=location.timezone,
+        hourly=_parse_hourly(data.get("hourly", {}), hours=hourly_hours)
         if location.hourly
         else [],
     )
 
 
-def _parse_hourly(hourly: object, limit: int) -> list[HourlyForecast]:
+def _parse_hourly(hourly: object, hours: int) -> list[HourlyForecast]:
     if not isinstance(hourly, dict):
         return []
 
@@ -109,13 +117,18 @@ def _parse_hourly(hourly: object, limit: int) -> list[HourlyForecast]:
     if not isinstance(times, list):
         return []
 
-    start_index = _first_future_hour_index(times)
+    parsed_times = _parse_hourly_times(times)
+    window_start = _hourly_window_start(parsed_times)
+    window_end = window_start + timedelta(hours=hours)
     forecasts: list[HourlyForecast] = []
-    for index in range(start_index, min(start_index + limit, len(times))):
+    for index, forecast_time in parsed_times:
+        if forecast_time < window_start or forecast_time >= window_end:
+            continue
+
         code = _list_int(codes, index)
         forecasts.append(
             HourlyForecast(
-                time_label=_format_hour_label(times[index]),
+                time_label=_format_hour_label(forecast_time),
                 temperature_c=_list_float(temperatures, index),
                 feels_like_c=_list_float(feels_like, index),
                 precipitation_probability_percent=_list_float(rain, index),
@@ -126,23 +139,28 @@ def _parse_hourly(hourly: object, limit: int) -> list[HourlyForecast]:
     return forecasts
 
 
-def _first_future_hour_index(times: list[object]) -> int:
-    now = datetime.now()
+def _parse_hourly_times(times: list[object]) -> list[tuple[int, datetime]]:
+    parsed: list[tuple[int, datetime]] = []
     for index, raw_time in enumerate(times):
         try:
-            forecast_time = datetime.fromisoformat(str(raw_time))
+            parsed.append((index, datetime.fromisoformat(str(raw_time))))
         except ValueError:
             continue
-        if forecast_time >= now.replace(minute=0, second=0, microsecond=0):
-            return index
-    return 0
+    return parsed
 
 
-def _format_hour_label(raw_time: object) -> str:
-    try:
-        return datetime.fromisoformat(str(raw_time)).strftime("%H:%M")
-    except ValueError:
-        return str(raw_time)
+def _hourly_window_start(parsed_times: list[tuple[int, datetime]]) -> datetime:
+    if not parsed_times:
+        today = datetime.now().date()
+        return datetime.combine(today, time(hour=HOURLY_WINDOW_START_HOUR))
+
+    first_forecast = min(forecast_time for _, forecast_time in parsed_times)
+    window_time = time(hour=HOURLY_WINDOW_START_HOUR, tzinfo=first_forecast.tzinfo)
+    return datetime.combine(first_forecast.date(), window_time)
+
+
+def _format_hour_label(forecast_time: datetime) -> str:
+    return forecast_time.strftime("%H:%M")
 
 
 def _list_float(values: object, index: int) -> float | None:

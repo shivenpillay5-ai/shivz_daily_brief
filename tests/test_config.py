@@ -102,6 +102,28 @@ class ConfigTests(unittest.TestCase):
     @patch.dict(
         "os.environ",
         {
+            "EMAIL_TO": "main@example.com,family@example.com",
+            "DEVOTIONAL_EMAIL_TO": "devotional@example.com,verse@example.com",
+            "ALERT_EMAIL_TO": "alerts@example.com",
+        },
+        clear=True,
+    )
+    def test_email_recipient_lists_are_parsed(self) -> None:
+        config = load_config()
+
+        self.assertEqual(
+            config.email.email_to,
+            ["main@example.com", "family@example.com"],
+        )
+        self.assertEqual(
+            config.email.devotional_email_to,
+            ["devotional@example.com", "verse@example.com"],
+        )
+        self.assertEqual(config.email.alert_email_to, ["alerts@example.com"])
+
+    @patch.dict(
+        "os.environ",
+        {
             "COUPLE_EMAIL_TO": "you@example.com,spouse@example.com",
             "COUPLE_SUBJECT_PREFIX": "Custom Couple Brief",
             "COUPLE_NAMES": "Shiv and spouse",

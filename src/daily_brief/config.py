@@ -54,6 +54,8 @@ class EmailConfig:
     email_from: str
     email_to: list[str]
     subject_prefix: str
+    devotional_email_to: list[str] = field(default_factory=list)
+    alert_email_to: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -151,6 +153,8 @@ def load_config(env_file: Path | None = None) -> AppConfig:
             email_from=_get("EMAIL_FROM", ""),
             email_to=_split_csv(_get("EMAIL_TO", "")),
             subject_prefix=_get("EMAIL_SUBJECT_PREFIX", "Shivz Daily Brief"),
+            devotional_email_to=_split_csv(_get("DEVOTIONAL_EMAIL_TO", "")),
+            alert_email_to=_split_csv(_get("ALERT_EMAIL_TO", "")),
         ),
         whatsapp=WhatsAppConfig(
             enabled=_get_bool("WHATSAPP_ENABLED", False),

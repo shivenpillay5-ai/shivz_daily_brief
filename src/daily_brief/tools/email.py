@@ -8,6 +8,9 @@ from email.message import EmailMessage
 from daily_brief.config import EmailConfig
 
 
+UNDISCLOSED_RECIPIENTS = "Undisclosed recipients:;"
+
+
 def send_email(
     config: EmailConfig,
     subject: str,
@@ -19,7 +22,7 @@ def send_email(
     message = EmailMessage()
     message["Subject"] = subject
     message["From"] = config.email_from
-    message["To"] = ", ".join(config.email_to)
+    message["To"] = UNDISCLOSED_RECIPIENTS
     message.set_content(text_body)
     message.add_alternative(html_body, subtype="html")
 
@@ -28,7 +31,7 @@ def send_email(
             smtp.starttls()
         if config.smtp_username:
             smtp.login(config.smtp_username, config.smtp_password)
-        smtp.send_message(message)
+        smtp.send_message(message, to_addrs=config.email_to)
 
 
 def _validate_email_config(config: EmailConfig) -> None:

@@ -21,6 +21,8 @@ jobs:
       SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
       EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
       EMAIL_TO: ${{ secrets.EMAIL_TO }}
+      DEVOTIONAL_EMAIL_TO: ${{ secrets.DEVOTIONAL_EMAIL_TO }}
+      ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
       DEVOTIONAL_SUBJECT_PREFIX: Daily Motivation and Bible Verse
 
     steps:

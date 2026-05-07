@@ -12,6 +12,7 @@ from daily_brief.models import (
     WeatherReport,
 )
 from daily_brief.tools.rendering import (
+    HERO_INTROS,
     SUMMARY_MAX_CHARS,
     render_html,
     render_text,
@@ -21,6 +22,9 @@ from daily_brief.tools.rendering import (
 
 
 class RendererTests(unittest.TestCase):
+    def test_render_html_has_month_of_hero_intro_variety(self) -> None:
+        self.assertEqual(len(HERO_INTROS), 30)
+
     def test_render_text_includes_links(self) -> None:
         weather = _weather("Johannesburg")
         item = RankedItem(
@@ -77,10 +81,30 @@ class RendererTests(unittest.TestCase):
 
         self.assertIn("Shivz Daily Brief", body)
         self.assertIn("Morning signal", body)
-        self.assertIn("Weather, world chaos, and AI plot twists", body)
+        self.assertTrue(any(intro in body for intro in HERO_INTROS))
         self.assertIn("Top World News", body)
         self.assertIn("Read story", body)
         self.assertIn("https://example.com/world", body)
+
+    def test_render_html_rotates_hero_intro_by_date(self) -> None:
+        weather = _weather("Johannesburg")
+
+        first_body = render_html(
+            brief_date=datetime(2026, 5, 4),
+            weather_reports=[weather],
+            world_items=[],
+            ai_tech_items=[],
+        )
+        second_body = render_html(
+            brief_date=datetime(2026, 5, 5),
+            weather_reports=[weather],
+            world_items=[],
+            ai_tech_items=[],
+        )
+
+        first_intro = next(intro for intro in HERO_INTROS if intro in first_body)
+        second_intro = next(intro for intro in HERO_INTROS if intro in second_body)
+        self.assertNotEqual(first_intro, second_intro)
 
     def test_render_html_adds_weather_mood(self) -> None:
         weather = _weather(
@@ -102,6 +126,20 @@ class RendererTests(unittest.TestCase):
         self.assertIn("Weather mood: warm", body)
         self.assertIn("Now", body)
 
+    def test_render_html_adds_weather_refresh_links_for_each_region(self) -> None:
+        body = render_html(
+            brief_date=datetime(2026, 5, 4),
+            weather_reports=[_weather("Midrand"), _weather("Cape Town")],
+            world_items=[],
+            ai_tech_items=[],
+        )
+
+        self.assertEqual(body.count("Real-time update &#8599;"), 2)
+        self.assertIn("live-weather.html", body)
+        self.assertIn("name=Midrand", body)
+        self.assertIn("lat=-25.9992", body)
+        self.assertIn("name=Cape+Town", body)
+
     def test_render_html_hides_feed_warnings_from_reader(self) -> None:
         weather = _weather("Johannesburg")
 
@@ -115,20 +153,12 @@ class RendererTests(unittest.TestCase):
 
         self.assertNotIn("Feed warnings", body)
         self.assertNotIn("UN News", body)
-        self.assertIn("Weather, world chaos, and AI plot twists", body)
+        self.assertTrue(any(intro in body for intro in HERO_INTROS))
 
     def test_render_html_shows_hourly_weather_for_featured_location(self) -> None:
         weather = _weather(
             "Midrand",
-            hourly=[
-                HourlyForecast(
-                    time_label="07:00",
-                    temperature_c=18,
-                    feels_like_c=18,
-                    precipitation_probability_percent=10,
-                    condition="clear sky",
-                )
-            ],
+            hourly=_hourly_forecasts(),
         )
 
         body = render_html(
@@ -139,8 +169,51 @@ class RendererTests(unittest.TestCase):
         )
 
         self.assertIn("Midrand", body)
-        self.assertIn("Next few hours", body)
-        self.assertIn("07:00", body)
+        self.assertIn("Next 24 hours", body)
+        self.assertIn("05:00 today to 04:00 tomorrow", body)
+        self.assertIn("05:00", body)
+        self.assertIn("04:00", body)
+        self.assertIn("width:8.33%", body)
+
+    def test_render_html_uses_night_icon_for_clear_hourly_weather(self) -> None:
+        weather = _weather(
+            "Midrand",
+            hourly=[
+                HourlyForecast(
+                    time_label="05:00",
+                    temperature_c=15,
+                    feels_like_c=15,
+                    precipitation_probability_percent=0,
+                    condition="clear sky",
+                ),
+                HourlyForecast(
+                    time_label="12:00",
+                    temperature_c=24,
+                    feels_like_c=24,
+                    precipitation_probability_percent=0,
+                    condition="clear sky",
+                ),
+                HourlyForecast(
+                    time_label="20:00",
+                    temperature_c=18,
+                    feels_like_c=18,
+                    precipitation_probability_percent=0,
+                    condition="clear sky",
+                ),
+            ],
+        )
+
+        body = render_html(
+            brief_date=datetime(2026, 5, 4),
+            weather_reports=[weather],
+            world_items=[],
+            ai_tech_items=[],
+        )
+
+        self.assertIn("🌙", body)
+        self.assertIn("☀️", body)
+        self.assertIn("background:#eef5ff", body)
+        self.assertIn("border:1px solid #b8c7df", body)
 
     def test_render_html_includes_market_pulse(self) -> None:
         weather = _weather("Midrand")
@@ -223,7 +296,7 @@ class RendererTests(unittest.TestCase):
         self.assertIn("Market Pulse", body)
         self.assertIn("Morning Signal", body)
         self.assertIn("USD/ZAR R18.42 ↑ 0.4%", body)
-        self.assertNotIn("Next few hours", body)
+        self.assertNotIn("Next 24 hours", body)
         self.assertNotIn("07:00", body)
 
     def test_render_whatsapp_template_parameters_match_approved_template(self) -> None:
@@ -264,6 +337,7 @@ def _weather(
     daily_max_c: float | None = 25,
     hourly: list[HourlyForecast] | None = None,
 ) -> WeatherReport:
+    latitude, longitude = _coordinates(location_name)
     return WeatherReport(
         location_name=location_name,
         temperature_c=temperature_c,
@@ -274,8 +348,35 @@ def _weather(
         daily_max_c=daily_max_c,
         precipitation_probability_percent=5,
         condition="clear sky",
+        latitude=latitude,
+        longitude=longitude,
+        timezone="Africa/Johannesburg",
         hourly=hourly or [],
     )
+
+
+def _coordinates(location_name: str) -> tuple[float, float]:
+    return {
+        "Midrand": (-25.9992, 28.1263),
+        "Johannesburg": (-26.2041, 28.0473),
+        "Cape Town": (-33.9249, 18.4241),
+        "Durban": (-29.8587, 31.0218),
+    }.get(location_name, (-25.9992, 28.1263))
+
+
+def _hourly_forecasts() -> list[HourlyForecast]:
+    labels = [f"{hour:02d}:00" for hour in range(5, 24)]
+    labels.extend(f"{hour:02d}:00" for hour in range(0, 5))
+    return [
+        HourlyForecast(
+            time_label=label,
+            temperature_c=18,
+            feels_like_c=18,
+            precipitation_probability_percent=10,
+            condition="clear sky",
+        )
+        for label in labels
+    ]
 
 
 def _market_pulse() -> MarketPulse:

@@ -28,6 +28,7 @@ jobs:
       SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
       EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
       EMAIL_TO: ${{ secrets.EMAIL_TO }}
+      ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
       EMAIL_SUBJECT_PREFIX: Shivz Daily Brief
 
       WHATSAPP_ENABLED: ${{ secrets.WHATSAPP_ENABLED }}

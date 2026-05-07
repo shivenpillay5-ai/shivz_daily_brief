@@ -17,10 +17,13 @@ from daily_brief.config import (
     WhatsAppConfig,
 )
 from daily_brief.models import MarketPulse, MarketQuote, RankedItem, WeatherReport
-from daily_brief.tools.summary import write_morning_summary
+from daily_brief.tools.summary import SUMMARY_OPENERS, write_morning_summary
 
 
 class SummaryTests(unittest.TestCase):
+    def test_fallback_summary_has_month_of_variety(self) -> None:
+        self.assertEqual(len(SUMMARY_OPENERS), 30)
+
     def test_write_morning_summary_uses_fallback_without_openai_key(self) -> None:
         summary = write_morning_summary(
             brief_date=datetime(2026, 5, 4),
@@ -32,12 +35,35 @@ class SummaryTests(unittest.TestCase):
             use_openai=True,
         )
 
-        self.assertEqual(summary.headline, "Your Morning, Lightly Stirred")
+        self.assertIn(summary.headline, [headline for headline, _ in SUMMARY_OPENERS])
         self.assertIn("Midrand", summary.body)
         self.assertNotIn("World lead", summary.body)
         self.assertNotIn("18.42", summary.body)
         self.assertEqual(summary.bullets, [])
         self.assertFalse(summary.used_openai)
+
+    def test_write_morning_summary_fallback_rotates_by_date(self) -> None:
+        first = write_morning_summary(
+            brief_date=datetime(2026, 5, 4),
+            weather_reports=[_weather()],
+            market_pulse=_market_pulse(),
+            world_items=[_ranked("World lead", "BBC World")],
+            ai_tech_items=[_ranked("AI lead", "TechCrunch AI")],
+            config=_config(openai_api_key=""),
+            use_openai=True,
+        )
+        second = write_morning_summary(
+            brief_date=datetime(2026, 5, 5),
+            weather_reports=[_weather()],
+            market_pulse=_market_pulse(),
+            world_items=[_ranked("World lead", "BBC World")],
+            ai_tech_items=[_ranked("AI lead", "TechCrunch AI")],
+            config=_config(openai_api_key=""),
+            use_openai=True,
+        )
+
+        self.assertNotEqual(first.headline, second.headline)
+        self.assertNotEqual(first.body, second.body)
 
     @patch("daily_brief.tools.summary.post_json")
     def test_write_morning_summary_uses_openai_json(self, post_json_mock) -> None:
@@ -64,6 +90,34 @@ class SummaryTests(unittest.TestCase):
         self.assertEqual(summary.headline, "Coffee Before Chaos")
         self.assertTrue(summary.used_openai)
         self.assertEqual(post_json_mock.call_count, 1)
+
+    @patch("daily_brief.tools.summary.post_json")
+    def test_write_morning_summary_sends_daily_style_cue_to_openai(
+        self,
+        post_json_mock,
+    ) -> None:
+        post_json_mock.return_value = {
+            "output_text": json.dumps(
+                {
+                    "headline": "Coffee Before Chaos",
+                    "body": "A crisp morning scan with markets awake and AI making noise.",
+                    "bullets": [],
+                }
+            )
+        }
+
+        write_morning_summary(
+            brief_date=datetime(2026, 5, 4),
+            weather_reports=[_weather()],
+            market_pulse=_market_pulse(),
+            world_items=[_ranked("World lead", "BBC World")],
+            ai_tech_items=[_ranked("AI lead", "TechCrunch AI")],
+            config=_config(openai_api_key="secret"),
+            use_openai=True,
+        )
+
+        payload = post_json_mock.call_args.kwargs["payload"]
+        self.assertIn('"opener_style"', payload["input"])
 
 
 def _weather() -> WeatherReport:

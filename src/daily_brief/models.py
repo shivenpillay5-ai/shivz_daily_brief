@@ -24,6 +24,9 @@ class WeatherReport:
     daily_max_c: float | None
     precipitation_probability_percent: float | None
     condition: str
+    latitude: float | None = None
+    longitude: float | None = None
+    timezone: str = ""
     hourly: list[HourlyForecast] = field(default_factory=list)
 
 

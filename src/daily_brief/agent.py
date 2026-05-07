@@ -211,8 +211,12 @@ class DailyBriefAgent:
         send_whatsapp_message(self.config.whatsapp, brief.whatsapp_body)
 
     def send_devotional(self, brief: DevotionalBrief) -> None:
-        send_email(
+        devotional_email = replace(
             self.config.email,
+            email_to=self.config.email.devotional_email_to or self.config.email.email_to,
+        )
+        send_email(
+            devotional_email,
             subject=brief.subject,
             text_body=brief.text_body,
             html_body=brief.html_body,
@@ -249,8 +253,12 @@ class DailyBriefAgent:
         run_url: str = "",
         alert_name: str = "Shivz Daily Brief",
     ) -> None:
-        send_failure_alert_email(
+        alert_email = replace(
             self.config.email,
+            email_to=self.config.email.alert_email_to or self.config.email.email_to,
+        )
+        send_failure_alert_email(
+            alert_email,
             brief_date=brief_date,
             log_text=log_text,
             run_url=run_url,

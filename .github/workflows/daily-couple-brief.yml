@@ -17,7 +17,8 @@ jobs:
       SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
       SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
       EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
-      EMAIL_TO: ${{ secrets.COUPLE_EMAIL_TO }}
+      EMAIL_TO: ${{ secrets.EMAIL_TO }}
+      ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
 
       COUPLE_EMAIL_TO: ${{ secrets.COUPLE_EMAIL_TO }}
       COUPLE_SUBJECT_PREFIX: "Team ShiNola - Our Daily Brief"

@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Live Weather | Shivz Daily Brief</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #102a43;
+        --muted: #5f7488;
+        --line: #d5e3ee;
+        --panel: #ffffff;
+        --soft: #f2f8fb;
+        --accent: #1f7a8c;
+        --accent-dark: #174f63;
+        --warn: #9b2c2c;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: #edf4f8;
+        color: var(--ink);
+      }
+
+      .shell {
+        width: min(960px, calc(100% - 28px));
+        margin: 0 auto;
+        padding: 24px 0 36px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 18px;
+      }
+
+      .brand {
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: var(--accent-dark);
+      }
+
+      button {
+        border: 1px solid #b2f5ea;
+        background: #e6fffa;
+        color: var(--accent);
+        border-radius: 999px;
+        padding: 9px 13px;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: .65;
+      }
+
+      .hero {
+        background: #184e68;
+        color: #ffffff;
+        border-radius: 14px;
+        padding: 24px;
+      }
+
+      .hero h1 {
+        margin: 8px 0 6px;
+        font-size: clamp(30px, 6vw, 50px);
+        line-height: 1;
+      }
+
+      .hero p {
+        margin: 0;
+        color: #d7eef7;
+      }
+
+      .status {
+        margin-top: 12px;
+        min-height: 20px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin: 14px 0 18px;
+      }
+
+      .metric,
+      .hour {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .metric {
+        padding: 14px;
+      }
+
+      .metric-label,
+      .hour-time {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+      }
+
+      .metric-value {
+        margin-top: 5px;
+        font-size: 24px;
+        font-weight: 900;
+      }
+
+      .section-title {
+        margin: 24px 0 9px;
+        color: var(--accent-dark);
+        font-size: 13px;
+        font-weight: 900;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+      }
+
+      .hours {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .hour {
+        min-height: 96px;
+        padding: 10px 8px;
+      }
+
+      .hour-temp {
+        margin-top: 8px;
+        font-size: 19px;
+        font-weight: 900;
+      }
+
+      .hour-detail {
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.35;
+      }
+
+      .error {
+        margin-top: 14px;
+        padding: 14px;
+        background: #fff5f5;
+        border: 1px solid #fed7d7;
+        border-radius: 8px;
+        color: var(--warn);
+      }
+
+      .footer {
+        margin-top: 22px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      @media (max-width: 720px) {
+        .topbar {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .hours {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <div class="topbar">
+        <div>
+          <div class="brand">Shivz Daily Brief</div>
+          <div id="sourceText" class="status"></div>
+        </div>
+        <button id="refreshButton" type="button">Refresh now</button>
+      </div>
+
+      <section class="hero" aria-labelledby="placeTitle">
+        <p>Live Open-Meteo weather</p>
+        <h1 id="placeTitle">Weather</h1>
+        <p id="conditionText">Fetching the latest conditions...</p>
+      </section>
+
+      <div id="statusText" class="status"></div>
+      <div id="errorBox" class="error" hidden></div>
+
+      <section class="grid" aria-label="Current conditions">
+        <div class="metric">
+          <div class="metric-label">Now</div>
+          <div id="temperature" class="metric-value">--</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Feels Like</div>
+          <div id="feelsLike" class="metric-value">--</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Humidity</div>
+          <div id="humidity" class="metric-value">--</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Wind</div>
+          <div id="wind" class="metric-value">--</div>
+        </div>
+      </section>
+
+      <div class="section-title">Next 12 Hours</div>
+      <section id="hourly" class="hours" aria-live="polite"></section>
+
+      <p class="footer">
+        Data from Open-Meteo. Use this page when you want a live browser refresh
+        instead of the static snapshot in the email.
+      </p>
+    </main>
+
+    <script>
+      const WEATHER_CODES = {
+        0: "Clear sky",
+        1: "Mainly clear",
+        2: "Partly cloudy",
+        3: "Overcast",
+        45: "Fog",
+        48: "Rime fog",
+        51: "Light drizzle",
+        53: "Moderate drizzle",
+        55: "Dense drizzle",
+        61: "Slight rain",
+        63: "Moderate rain",
+        65: "Heavy rain",
+        71: "Slight snow",
+        73: "Moderate snow",
+        75: "Heavy snow",
+        80: "Slight rain showers",
+        81: "Moderate rain showers",
+        82: "Violent rain showers",
+        95: "Thunderstorm",
+        96: "Thunderstorm with slight hail",
+        99: "Thunderstorm with heavy hail"
+      };
+
+      const params = new URLSearchParams(window.location.search);
+      const place = params.get("name") || "Midrand";
+      const latitude = Number(params.get("lat") || "-25.9992");
+      const longitude = Number(params.get("lon") || "28.1263");
+      const timezone = params.get("timezone") || "Africa/Johannesburg";
+
+      const elements = {
+        placeTitle: document.getElementById("placeTitle"),
+        sourceText: document.getElementById("sourceText"),
+        conditionText: document.getElementById("conditionText"),
+        statusText: document.getElementById("statusText"),
+        errorBox: document.getElementById("errorBox"),
+        refreshButton: document.getElementById("refreshButton"),
+        temperature: document.getElementById("temperature"),
+        feelsLike: document.getElementById("feelsLike"),
+        humidity: document.getElementById("humidity"),
+        wind: document.getElementById("wind"),
+        hourly: document.getElementById("hourly")
+      };
+
+      elements.placeTitle.textContent = place;
+      elements.sourceText.textContent = `${latitude.toFixed(4)}, ${longitude.toFixed(4)} | ${timezone}`;
+      elements.refreshButton.addEventListener("click", loadWeather);
+
+      function weatherDescription(code) {
+        return WEATHER_CODES[Number(code)] || "Conditions unavailable";
+      }
+
+      function formatNumber(value, suffix) {
+        return Number.isFinite(Number(value)) ? `${Math.round(Number(value))}${suffix}` : "--";
+      }
+
+      function formatTime(value) {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+          return String(value).slice(11, 16);
+        }
+        return new Intl.DateTimeFormat([], { hour: "2-digit", minute: "2-digit" }).format(date);
+      }
+
+      function endpointUrl() {
+        const query = new URLSearchParams({
+          latitude: String(latitude),
+          longitude: String(longitude),
+          timezone,
+          forecast_days: "2",
+          current: "temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code",
+          hourly: "temperature_2m,apparent_temperature,precipitation_probability,weather_code"
+        });
+        return `https://api.open-meteo.com/v1/forecast?${query.toString()}`;
+      }
+
+      async function loadWeather() {
+        elements.refreshButton.disabled = true;
+        elements.errorBox.hidden = true;
+        elements.statusText.textContent = "Fetching latest weather...";
+
+        try {
+          const response = await fetch(endpointUrl(), { cache: "no-store" });
+          if (!response.ok) {
+            throw new Error(`Open-Meteo returned ${response.status}`);
+          }
+          renderWeather(await response.json());
+        } catch (error) {
+          elements.errorBox.hidden = false;
+          elements.errorBox.textContent = `Could not fetch live weather: ${error.message}`;
+          elements.statusText.textContent = "";
+        } finally {
+          elements.refreshButton.disabled = false;
+        }
+      }
+
+      function renderWeather(data) {
+        const current = data.current || {};
+        elements.conditionText.textContent = weatherDescription(current.weather_code);
+        elements.temperature.textContent = formatNumber(current.temperature_2m, "C");
+        elements.feelsLike.textContent = formatNumber(current.apparent_temperature, "C");
+        elements.humidity.textContent = formatNumber(current.relative_humidity_2m, "%");
+        elements.wind.textContent = formatNumber(current.wind_speed_10m, " km/h");
+
+        const fetchedAt = new Date();
+        elements.statusText.textContent =
+          `Updated ${fetchedAt.toLocaleDateString()} ${fetchedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+
+        renderHourly(data.hourly || {}, current.time || "");
+      }
+
+      function renderHourly(hourly, currentTime) {
+        const times = Array.isArray(hourly.time) ? hourly.time : [];
+        const startIndex = Math.max(0, times.findIndex((time) => !currentTime || time >= currentTime));
+        const cards = times.slice(startIndex, startIndex + 12).map((time, offset) => {
+          const index = startIndex + offset;
+          const description = weatherDescription((hourly.weather_code || [])[index]);
+          const temperature = formatNumber((hourly.temperature_2m || [])[index], "C");
+          const rain = formatNumber((hourly.precipitation_probability || [])[index], "%");
+          return `
+            <article class="hour">
+              <div class="hour-time">${formatTime(time)}</div>
+              <div class="hour-temp">${temperature}</div>
+              <div class="hour-detail">${description}<br>Rain ${rain}</div>
+            </article>
+          `;
+        });
+
+        elements.hourly.innerHTML = cards.join("") || "<p>No hourly forecast is available.</p>";
+      }
+
+      loadWeather();
+    </script>
+  </body>
+</html>

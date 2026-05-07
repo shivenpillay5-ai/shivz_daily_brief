@@ -102,6 +102,16 @@ Send the email:
 daily-brief --send
 ```
 
+When `EMAIL_TO` has multiple comma-separated addresses, the app sends to that
+list privately instead of showing the full recipient list in the email header.
+
+The optional `ALERT_EMAIL_TO` list controls who receives scheduled-run failure
+alerts. If it is empty, alerts fall back to `EMAIL_TO`.
+
+The weather cards include `Real-time update` links. Those open the static
+`docs/live-weather.html` page in a browser with the region coordinates in the
+URL, then fetch live Open-Meteo data on demand.
+
 Send the WhatsApp version:
 
 ```powershell
@@ -141,6 +151,9 @@ Send the devotional email:
 daily-brief --devotional --send
 ```
 
+Set `DEVOTIONAL_EMAIL_TO` when the devotional should go to a different audience
+from the main brief. If it is empty, the devotional falls back to `EMAIL_TO`.
+
 Preview the private couple brief:
 
 ```powershell
@@ -160,6 +173,7 @@ daily-brief --couple --send
 ```
 
 `--couple --send` uses `COUPLE_EMAIL_TO`, not `EMAIL_TO`, so the private note does not accidentally go to the wider family list.
+Multiple `COUPLE_EMAIL_TO` addresses are also sent privately.
 
 ## Google Calendar Setup For The Couple Brief
 
@@ -219,6 +233,26 @@ Then register the 07:00 task:
 
 That registers a Windows Scheduled Task named `DailyBriefAgent` to run every day at 07:00.
 Each scheduled run writes a log file into `logs/`.
+
+## Live Weather Page
+
+The `Real-time update` weather buttons use GitHub Pages. The static page lives at:
+
+```text
+docs/live-weather.html
+```
+
+The `Live Weather Page` workflow deploys that folder to GitHub Pages whenever
+`docs/**` changes. In the repository settings, set GitHub Pages to use
+`GitHub Actions` as the source if it is not already enabled.
+
+After the first successful deploy, the email buttons open:
+
+```text
+https://shivenpillay5-ai.github.io/shivz_daily_brief/live-weather.html
+```
+
+Each link includes the selected region's name, latitude, longitude, and timezone.
 
 ## GitHub Actions Scheduling
 
@@ -305,6 +339,15 @@ GOOGLE_CALENDAR_CREDENTIALS_JSON_B64
 GOOGLE_CALENDAR_TOKEN_JSON_B64
 ```
 
+These optional repository secrets let each email type use the right audience:
+
+```text
+DEVOTIONAL_EMAIL_TO
+ALERT_EMAIL_TO
+```
+
+If either optional secret is left empty, the app falls back to `EMAIL_TO`.
+
 Create the two Google Calendar secret values from the local OAuth files:
 
 ```powershell
@@ -388,10 +431,16 @@ SMTP_PORT=587
 SMTP_USERNAME=your_email@gmail.com
 SMTP_PASSWORD=your_app_password
 EMAIL_FROM=your_email@gmail.com
+# Comma-separate multiple recipients. They are sent BCC-style.
 EMAIL_TO=you@example.com
+# Optional. Falls back to EMAIL_TO when empty.
+DEVOTIONAL_EMAIL_TO=
+# Optional. Falls back to EMAIL_TO when empty.
+ALERT_EMAIL_TO=
 EMAIL_SUBJECT_PREFIX=Shivz Daily Brief
 DEVOTIONAL_SUBJECT_PREFIX=Daily Motivation and Bible Verse
 
+# Comma-separate multiple recipients. They are sent BCC-style.
 COUPLE_EMAIL_TO=you@example.com,spouse@example.com
 COUPLE_SUBJECT_PREFIX=Team ShiNola - Our Daily Brief
 COUPLE_NAMES=you two

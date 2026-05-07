@@ -152,6 +152,45 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(args[0].email_to, ["spouse@example.com"])
         self.assertEqual(kwargs["subject"], brief.subject)
 
+    @patch("daily_brief.agent.send_email")
+    def test_agent_sends_devotional_brief_to_devotional_recipients(
+        self,
+        send_email_mock,
+    ) -> None:
+        brief = DevotionalBrief(
+            subject="Daily Motivation and Bible Verse - 2026-05-04",
+            text_body="text",
+            html_body="<p>text</p>",
+            whatsapp_body="whatsapp",
+            devotional=_devotional_content(),
+        )
+
+        DailyBriefAgent(
+            _config(devotional_email_to=["devotional@example.com"])
+        ).send_devotional(brief)
+
+        args, kwargs = send_email_mock.call_args
+        self.assertEqual(args[0].email_to, ["devotional@example.com"])
+        self.assertEqual(kwargs["subject"], brief.subject)
+
+    @patch("daily_brief.agent.send_email")
+    def test_agent_sends_devotional_brief_to_main_recipients_by_default(
+        self,
+        send_email_mock,
+    ) -> None:
+        brief = DevotionalBrief(
+            subject="Daily Motivation and Bible Verse - 2026-05-04",
+            text_body="text",
+            html_body="<p>text</p>",
+            whatsapp_body="whatsapp",
+            devotional=_devotional_content(),
+        )
+
+        DailyBriefAgent(_config()).send_devotional(brief)
+
+        args, _ = send_email_mock.call_args
+        self.assertEqual(args[0].email_to, ["reader@example.com"])
+
     def test_agent_requires_couple_recipients_before_sending(self) -> None:
         brief = CoupleBrief(
             subject="Team ShiNola - Our Daily Brief - 2026-05-04",
@@ -162,6 +201,35 @@ class AgentTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "COUPLE_EMAIL_TO"):
             DailyBriefAgent(_config(couple_email_to=[])).send_couple(brief)
+
+    @patch("daily_brief.agent.send_failure_alert_email")
+    def test_agent_sends_failure_alert_to_alert_recipients(
+        self,
+        send_failure_alert_mock,
+    ) -> None:
+        DailyBriefAgent(
+            _config(alert_email_to=["alerts@example.com"])
+        ).send_failure_alert(
+            brief_date=__import__("datetime").datetime(2026, 5, 4),
+            log_text="failed",
+        )
+
+        args, kwargs = send_failure_alert_mock.call_args
+        self.assertEqual(args[0].email_to, ["alerts@example.com"])
+        self.assertEqual(kwargs["log_text"], "failed")
+
+    @patch("daily_brief.agent.send_failure_alert_email")
+    def test_agent_sends_failure_alert_to_main_recipients_by_default(
+        self,
+        send_failure_alert_mock,
+    ) -> None:
+        DailyBriefAgent(_config()).send_failure_alert(
+            brief_date=__import__("datetime").datetime(2026, 5, 4),
+            log_text="failed",
+        )
+
+        args, _ = send_failure_alert_mock.call_args
+        self.assertEqual(args[0].email_to, ["reader@example.com"])
 
 
 def _couple_content() -> CoupleBriefContent:
@@ -189,9 +257,29 @@ def _couple_content() -> CoupleBriefContent:
     )
 
 
-def _config(couple_email_to: list[str] | None = None) -> AppConfig:
+def _devotional_content() -> DevotionalContent:
+    return DevotionalContent(
+        title="Start With Gratitude",
+        verse=ScriptureVerse(
+            reference="Psalm 118:24",
+            text="This is the day which the LORD hath made; we will rejoice and be glad in it.",
+            translation="KJV",
+        ),
+        reflection="Start with gratitude before the day gets noisy.",
+    )
+
+
+def _config(
+    couple_email_to: list[str] | None = None,
+    devotional_email_to: list[str] | None = None,
+    alert_email_to: list[str] | None = None,
+) -> AppConfig:
     if couple_email_to is None:
         couple_email_to = ["spouse@example.com"]
+    if devotional_email_to is None:
+        devotional_email_to = []
+    if alert_email_to is None:
+        alert_email_to = []
 
     return AppConfig(
         location=LocationConfig(
@@ -209,6 +297,8 @@ def _config(couple_email_to: list[str] | None = None) -> AppConfig:
             email_from="sender@example.com",
             email_to=["reader@example.com"],
             subject_prefix="Shivz Daily Brief",
+            devotional_email_to=devotional_email_to,
+            alert_email_to=alert_email_to,
         ),
         whatsapp=WhatsAppConfig(
             enabled=True,
