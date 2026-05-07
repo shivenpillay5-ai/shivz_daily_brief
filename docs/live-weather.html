@@ -7,13 +7,19 @@
     <style>
       :root {
         color-scheme: light;
+        --page: #edf4f8;
+        --card: #ffffff;
         --ink: #102a43;
-        --muted: #5f7488;
-        --line: #d5e3ee;
-        --panel: #ffffff;
-        --soft: #f2f8fb;
-        --accent: #1f7a8c;
-        --accent-dark: #174f63;
+        --muted: #627d8a;
+        --line: #d9e2ec;
+        --soft: #f3fbfd;
+        --soft-line: #cce8f0;
+        --blue: #184e68;
+        --blue-soft: #d9f0f7;
+        --teal: #1f7a8c;
+        --teal-soft: #e6fffa;
+        --night: #eef5ff;
+        --night-line: #b8c7df;
         --warn: #9b2c2c;
       }
 
@@ -23,18 +29,93 @@
 
       body {
         margin: 0;
-        font-family: "Segoe UI", Arial, sans-serif;
-        background: #edf4f8;
+        background: var(--page);
         color: var(--ink);
+        font-family: "Segoe UI", Arial, sans-serif;
+      }
+
+      button {
+        font: inherit;
       }
 
       .shell {
-        width: min(960px, calc(100% - 28px));
+        width: min(760px, calc(100% - 24px));
         margin: 0 auto;
-        padding: 24px 0 36px;
+        padding: 28px 0 38px;
       }
 
-      .topbar {
+      .email-card {
+        overflow: hidden;
+        background: var(--card);
+        border-radius: 22px;
+        box-shadow: 0 18px 45px rgba(27, 55, 73, .16);
+      }
+
+      .hero {
+        background: var(--blue);
+        color: #ffffff;
+        padding: 34px 34px 30px;
+      }
+
+      .hero-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+      }
+
+      .badge {
+        display: inline-block;
+        background: var(--blue-soft);
+        color: var(--blue);
+        border-radius: 999px;
+        padding: 7px 11px;
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+      }
+
+      .date-pill {
+        border: 1px solid rgba(255, 255, 255, .35);
+        border-radius: 14px;
+        padding: 10px 12px;
+        color: #e7f6fb;
+        font-size: 14px;
+        font-weight: 800;
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      .date-pill span {
+        color: #b9e3f2;
+        font-weight: 700;
+      }
+
+      h1 {
+        margin: 14px 0 0;
+        font-size: clamp(34px, 7vw, 48px);
+        line-height: 1.05;
+        letter-spacing: 0;
+      }
+
+      .hero-note {
+        margin: 18px 0 0;
+        max-width: 640px;
+        border-left: 4px solid #b9e3f2;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, .08);
+        padding: 16px 18px;
+        color: #e7f6fb;
+        font-size: 15px;
+        line-height: 1.5;
+      }
+
+      .content {
+        padding: 28px 34px 30px;
+      }
+
+      .action-row {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -42,124 +123,224 @@
         margin-bottom: 18px;
       }
 
-      .brand {
-        font-size: 12px;
-        font-weight: 800;
+      .status {
+        min-height: 18px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      .refresh-button {
+        border: 1px solid #b2f5ea;
+        background: var(--teal-soft);
+        color: var(--teal);
+        border-radius: 999px;
+        padding: 9px 14px;
+        font-size: 13px;
+        font-weight: 900;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      .refresh-button:disabled {
+        cursor: wait;
+        opacity: .68;
+      }
+
+      .section-kicker {
+        color: #4f6f7d;
+        font-size: 13px;
+        font-weight: 900;
         letter-spacing: .08em;
         text-transform: uppercase;
-        color: var(--accent-dark);
       }
 
-      button {
-        border: 1px solid #b2f5ea;
-        background: #e6fffa;
-        color: var(--accent);
-        border-radius: 999px;
-        padding: 9px 13px;
-        font: inherit;
-        font-size: 13px;
-        font-weight: 800;
-        cursor: pointer;
+      .section-heading {
+        margin: 6px 0 14px;
+        color: var(--ink);
+        font-size: 23px;
+        line-height: 1.2;
       }
 
-      button:disabled {
-        cursor: wait;
-        opacity: .65;
+      .weather-card {
+        margin-bottom: 12px;
+        border: 1px solid var(--soft-line);
+        border-radius: 18px;
+        background: #fbfdfe;
       }
 
-      .hero {
-        background: #184e68;
-        color: #ffffff;
-        border-radius: 14px;
+      .weather-card.featured {
+        background: var(--soft);
+      }
+
+      .weather-card.opened {
+        border-color: var(--teal);
+        box-shadow: inset 0 0 0 1px rgba(31, 122, 140, .18);
+      }
+
+      .weather-inner {
+        padding: 20px;
+      }
+
+      .weather-card.featured .weather-inner {
         padding: 24px;
       }
 
-      .hero h1 {
-        margin: 8px 0 6px;
-        font-size: clamp(30px, 6vw, 50px);
+      .weather-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .weather-name {
+        margin: 0;
+        color: var(--ink);
+        font-size: 22px;
+        line-height: 1.2;
+      }
+
+      .weather-card.featured .weather-name {
+        font-size: 26px;
+      }
+
+      .opened-pill {
+        display: none;
+        margin-top: 6px;
+        color: var(--teal);
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+      }
+
+      .weather-card.opened .opened-pill {
+        display: block;
+      }
+
+      .weather-icon {
+        width: 42px;
+        height: 42px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #ffffff;
+        font-size: 24px;
         line-height: 1;
       }
 
-      .hero p {
-        margin: 0;
-        color: #d7eef7;
+      .condition {
+        margin: 8px 0 6px;
+        color: #334e68;
+        font-size: 15px;
+        line-height: 1.5;
       }
 
-      .status {
-        margin-top: 12px;
-        min-height: 20px;
-        color: var(--muted);
-        font-size: 13px;
+      .mood {
+        margin: 0 0 16px;
+        color: #486581;
+        font-size: 14px;
+        line-height: 1.5;
       }
 
-      .grid {
+      .metrics {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 10px;
-        margin: 14px 0 18px;
-      }
-
-      .metric,
-      .hour {
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: 8px;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
       }
 
       .metric {
-        padding: 14px;
+        min-height: 76px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #ffffff;
+        padding: 11px 10px;
       }
 
       .metric-label,
       .hour-time {
-        color: var(--muted);
+        color: #718096;
         font-size: 11px;
-        font-weight: 800;
+        font-weight: 900;
         letter-spacing: .04em;
         text-transform: uppercase;
       }
 
       .metric-value {
+        display: flex;
+        align-items: center;
+        gap: 6px;
         margin-top: 5px;
-        font-size: 24px;
+        color: var(--ink);
+        font-size: 17px;
         font-weight: 900;
       }
 
-      .section-title {
-        margin: 24px 0 9px;
-        color: var(--accent-dark);
-        font-size: 13px;
+      .weather-card.featured .metric-value {
+        font-size: 18px;
+      }
+
+      .hourly-title {
+        margin: 16px 0 3px;
+        color: #4f6f7d;
+        font-size: 12px;
         font-weight: 900;
         letter-spacing: .08em;
         text-transform: uppercase;
       }
 
-      .hours {
-        display: grid;
-        grid-template-columns: repeat(6, minmax(0, 1fr));
-        gap: 8px;
+      .hourly-note {
+        margin: 0 0 7px;
+        color: var(--muted);
+        font-size: 12px;
       }
 
-      .hour {
-        min-height: 96px;
-        padding: 10px 8px;
+      .hour-strip {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        padding: 2px 2px 10px;
+        scroll-snap-type: x proximity;
+      }
+
+      .hour-card {
+        flex: 0 0 72px;
+        min-height: 86px;
+        scroll-snap-align: start;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 7px 5px;
+        text-align: center;
+      }
+
+      .hour-card.night {
+        background: var(--night);
+        border-color: var(--night-line);
+      }
+
+      .hour-icon {
+        margin: 5px 0 4px;
+        font-size: 18px;
+        line-height: 1;
       }
 
       .hour-temp {
-        margin-top: 8px;
-        font-size: 19px;
+        color: var(--ink);
+        font-size: 15px;
         font-weight: 900;
       }
 
       .hour-detail {
-        margin-top: 5px;
+        margin-top: 3px;
         color: var(--muted);
-        font-size: 12px;
-        line-height: 1.35;
+        font-size: 10px;
+        line-height: 1.25;
       }
 
       .error {
-        margin-top: 14px;
+        margin: 0 0 14px;
         padding: 14px;
         background: #fff5f5;
         border: 1px solid #fed7d7;
@@ -168,75 +349,92 @@
       }
 
       .footer {
-        margin-top: 22px;
+        margin: 24px 0 0;
         color: var(--muted);
         font-size: 12px;
+        line-height: 1.45;
+        text-align: center;
       }
 
-      @media (max-width: 720px) {
-        .topbar {
+      @media (max-width: 760px) {
+        .shell {
+          width: min(100% - 18px, 760px);
+          padding-top: 10px;
+        }
+
+        .hero,
+        .content {
+          padding-left: 20px;
+          padding-right: 20px;
+        }
+
+        .hero-top,
+        .action-row {
           align-items: flex-start;
           flex-direction: column;
         }
 
-        .grid {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
+        .date-pill {
+          text-align: left;
         }
 
-        .hours {
-          grid-template-columns: repeat(3, minmax(0, 1fr));
+        .metrics {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 520px) {
+        .metrics {
+          grid-template-columns: 1fr;
         }
       }
     </style>
   </head>
   <body>
     <main class="shell">
-      <div class="topbar">
-        <div>
-          <div class="brand">Shivz Daily Brief</div>
-          <div id="sourceText" class="status"></div>
-        </div>
-        <button id="refreshButton" type="button">Refresh now</button>
-      </div>
+      <section class="email-card">
+        <header class="hero">
+          <div class="hero-top">
+            <div>
+              <span class="badge">Live weather</span>
+              <h1>Weather Around The People</h1>
+            </div>
+            <div class="date-pill" id="datePill"></div>
+          </div>
+          <p class="hero-note">
+            Same order as the email, but wired live: Midrand first with hourly detail,
+            then Johannesburg, Cape Town, and Durban underneath.
+          </p>
+        </header>
 
-      <section class="hero" aria-labelledby="placeTitle">
-        <p>Live Open-Meteo weather</p>
-        <h1 id="placeTitle">Weather</h1>
-        <p id="conditionText">Fetching the latest conditions...</p>
+        <section class="content">
+          <div class="action-row">
+            <div id="statusText" class="status"></div>
+            <button id="refreshButton" class="refresh-button" type="button">Refresh now</button>
+          </div>
+
+          <div id="errorBox" class="error" hidden></div>
+
+          <div class="section-kicker">Weather watch</div>
+          <h2 class="section-heading">Live Region Snapshot</h2>
+          <section id="weatherList" aria-live="polite"></section>
+
+          <p class="footer">
+            Data from Open-Meteo. This page keeps the email's structure, but refreshes
+            live in the browser.
+          </p>
+        </section>
       </section>
-
-      <div id="statusText" class="status"></div>
-      <div id="errorBox" class="error" hidden></div>
-
-      <section class="grid" aria-label="Current conditions">
-        <div class="metric">
-          <div class="metric-label">Now</div>
-          <div id="temperature" class="metric-value">--</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Feels Like</div>
-          <div id="feelsLike" class="metric-value">--</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Humidity</div>
-          <div id="humidity" class="metric-value">--</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Wind</div>
-          <div id="wind" class="metric-value">--</div>
-        </div>
-      </section>
-
-      <div class="section-title">Next 12 Hours</div>
-      <section id="hourly" class="hours" aria-live="polite"></section>
-
-      <p class="footer">
-        Data from Open-Meteo. Use this page when you want a live browser refresh
-        instead of the static snapshot in the email.
-      </p>
     </main>
 
     <script>
+      const REGIONS = [
+        { name: "Midrand", latitude: -25.9992, longitude: 28.1263, timezone: "Africa/Johannesburg", featured: true },
+        { name: "Johannesburg", latitude: -26.2041, longitude: 28.0473, timezone: "Africa/Johannesburg" },
+        { name: "Cape Town", latitude: -33.9249, longitude: 18.4241, timezone: "Africa/Johannesburg" },
+        { name: "Durban", latitude: -29.8587, longitude: 31.0218, timezone: "Africa/Johannesburg" }
+      ];
+
       const WEATHER_CODES = {
         0: "Clear sky",
         1: "Mainly clear",
@@ -262,35 +460,80 @@
       };
 
       const params = new URLSearchParams(window.location.search);
-      const place = params.get("name") || "Midrand";
-      const latitude = Number(params.get("lat") || "-25.9992");
-      const longitude = Number(params.get("lon") || "28.1263");
-      const timezone = params.get("timezone") || "Africa/Johannesburg";
+      const openedRegionName = params.get("name") || "Midrand";
+      const weatherByRegion = new Map();
 
       const elements = {
-        placeTitle: document.getElementById("placeTitle"),
-        sourceText: document.getElementById("sourceText"),
-        conditionText: document.getElementById("conditionText"),
+        datePill: document.getElementById("datePill"),
         statusText: document.getElementById("statusText"),
         errorBox: document.getElementById("errorBox"),
         refreshButton: document.getElementById("refreshButton"),
-        temperature: document.getElementById("temperature"),
-        feelsLike: document.getElementById("feelsLike"),
-        humidity: document.getElementById("humidity"),
-        wind: document.getElementById("wind"),
-        hourly: document.getElementById("hourly")
+        weatherList: document.getElementById("weatherList")
       };
 
-      elements.placeTitle.textContent = place;
-      elements.sourceText.textContent = `${latitude.toFixed(4)}, ${longitude.toFixed(4)} | ${timezone}`;
-      elements.refreshButton.addEventListener("click", loadWeather);
+      elements.refreshButton.addEventListener("click", () => loadAllWeather({ force: true }));
+      renderStaticChrome();
+      renderWeatherList();
+      loadAllWeather();
+
+      function renderStaticChrome() {
+        const now = new Date();
+        elements.datePill.innerHTML = `${now.toLocaleDateString([], { weekday: "long" })}<br><span>${now.toLocaleDateString([], { day: "2-digit", month: "long", year: "numeric" })}</span>`;
+      }
 
       function weatherDescription(code) {
         return WEATHER_CODES[Number(code)] || "Conditions unavailable";
       }
 
+      function conditionIcon(code, timeValue = "") {
+        const description = weatherDescription(code).toLowerCase();
+        const isNight = isNightTime(timeValue);
+        if (description.includes("thunder")) return "⛈️";
+        if (description.includes("rain") || description.includes("drizzle") || description.includes("shower")) return "🌧️";
+        if (description.includes("snow")) return "❄️";
+        if (description.includes("fog")) return "🌫️";
+        if (description.includes("mainly clear")) return isNight ? "🌙" : "🌤️";
+        if (description.includes("clear")) return isNight ? "🌙" : "☀️";
+        if (description.includes("partly")) return isNight ? "☁️" : "⛅";
+        if (description.includes("cloud") || description.includes("overcast")) return "☁️";
+        return isNight ? "🌙" : "🌤️";
+      }
+
+      function temperatureIcon(value) {
+        const temperature = Number(value);
+        if (!Number.isFinite(temperature)) return "🌡️";
+        if (temperature <= 10) return "🥶";
+        if (temperature <= 17) return "🧥";
+        if (temperature <= 25) return "😎";
+        if (temperature <= 31) return "🔥";
+        return "🫠";
+      }
+
+      function weatherMood(current) {
+        const temperature = Number(current.apparent_temperature ?? current.temperature_2m);
+        if (!Number.isFinite(temperature)) return "Weather mood: mysterious. The sky is keeping its cards close today.";
+        if (temperature <= 10) return "Weather mood: very cold. Blanket diplomacy is strongly advised.";
+        if (temperature <= 17) return "Weather mood: crisp. Bring a jacket and pretend you planned the outfit.";
+        if (temperature <= 25) return "Weather mood: pleasant. Main-character weather has entered the chat.";
+        if (temperature <= 31) return "Weather mood: warm. Hydrate like your inbox depends on it.";
+        return "Weather mood: spicy. The sun woke up and chose drama.";
+      }
+
+      function isNightTime(value) {
+        const date = value ? new Date(value) : new Date();
+        if (Number.isNaN(date.getTime())) return false;
+        const hour = date.getHours();
+        return hour < 6 || hour >= 18;
+      }
+
       function formatNumber(value, suffix) {
         return Number.isFinite(Number(value)) ? `${Math.round(Number(value))}${suffix}` : "--";
+      }
+
+      function formatRange(daily) {
+        const min = formatNumber((daily.temperature_2m_min || [])[0], "C");
+        const max = formatNumber((daily.temperature_2m_max || [])[0], "C");
+        return `${min}-${max}`;
       }
 
       function formatTime(value) {
@@ -301,29 +544,30 @@
         return new Intl.DateTimeFormat([], { hour: "2-digit", minute: "2-digit" }).format(date);
       }
 
-      function endpointUrl() {
+      function endpointUrl(region) {
         const query = new URLSearchParams({
-          latitude: String(latitude),
-          longitude: String(longitude),
-          timezone,
+          latitude: String(region.latitude),
+          longitude: String(region.longitude),
+          timezone: region.timezone,
           forecast_days: "2",
           current: "temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code",
+          daily: "temperature_2m_min,temperature_2m_max,precipitation_probability_max,weather_code",
           hourly: "temperature_2m,apparent_temperature,precipitation_probability,weather_code"
         });
         return `https://api.open-meteo.com/v1/forecast?${query.toString()}`;
       }
 
-      async function loadWeather() {
+      async function loadAllWeather({ force = false } = {}) {
         elements.refreshButton.disabled = true;
         elements.errorBox.hidden = true;
         elements.statusText.textContent = "Fetching latest weather...";
 
         try {
-          const response = await fetch(endpointUrl(), { cache: "no-store" });
-          if (!response.ok) {
-            throw new Error(`Open-Meteo returned ${response.status}`);
-          }
-          renderWeather(await response.json());
+          await Promise.all(REGIONS.map((region) => loadRegion(region, force)));
+          renderWeatherList();
+          const fetchedAt = new Date();
+          elements.statusText.textContent =
+            `Updated ${fetchedAt.toLocaleDateString()} ${fetchedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
         } catch (error) {
           elements.errorBox.hidden = false;
           elements.errorBox.textContent = `Could not fetch live weather: ${error.message}`;
@@ -333,42 +577,88 @@
         }
       }
 
-      function renderWeather(data) {
+      async function loadRegion(region, force) {
+        if (!force && weatherByRegion.has(region.name)) return;
+        const response = await fetch(endpointUrl(region), { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`Open-Meteo returned ${response.status} for ${region.name}`);
+        }
+        weatherByRegion.set(region.name, await response.json());
+      }
+
+      function renderWeatherList() {
+        elements.weatherList.innerHTML = REGIONS.map((region) => renderWeatherCard(region)).join("");
+      }
+
+      function renderWeatherCard(region) {
+        const data = weatherByRegion.get(region.name) || {};
         const current = data.current || {};
-        elements.conditionText.textContent = weatherDescription(current.weather_code);
-        elements.temperature.textContent = formatNumber(current.temperature_2m, "C");
-        elements.feelsLike.textContent = formatNumber(current.apparent_temperature, "C");
-        elements.humidity.textContent = formatNumber(current.relative_humidity_2m, "%");
-        elements.wind.textContent = formatNumber(current.wind_speed_10m, " km/h");
+        const daily = data.daily || {};
+        const icon = conditionIcon(current.weather_code, current.time);
+        const opened = region.name.toLowerCase() === openedRegionName.toLowerCase();
+        const classes = [
+          "weather-card",
+          region.featured ? "featured" : "",
+          opened ? "opened" : ""
+        ].filter(Boolean).join(" ");
 
-        const fetchedAt = new Date();
-        elements.statusText.textContent =
-          `Updated ${fetchedAt.toLocaleDateString()} ${fetchedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+        return `
+          <article class="${classes}">
+            <div class="weather-inner">
+              <div class="weather-header">
+                <div>
+                  <h3 class="weather-name">${region.name}</h3>
+                  <div class="opened-pill">Opened from email</div>
+                </div>
+                <div class="weather-icon" aria-hidden="true">${icon}</div>
+              </div>
+              <p class="condition">${icon} ${weatherDescription(current.weather_code)}</p>
+              <p class="mood">${weatherMood(current)}</p>
+              <div class="metrics">
+                ${metric(`${temperatureIcon(current.temperature_2m)} Now`, formatNumber(current.temperature_2m, "C"))}
+                ${metric("🤔 Feels Like", formatNumber(current.apparent_temperature, "C"))}
+                ${metric("🌡 Range", formatRange(daily))}
+                ${metric("☔ Rain", formatNumber((daily.precipitation_probability_max || [])[0], "%"))}
+                ${metric("💨 Wind", formatNumber(current.wind_speed_10m, " km/h"))}
+              </div>
+              ${region.featured ? renderHourly(data.hourly || {}, current.time || "") : ""}
+            </div>
+          </article>
+        `;
+      }
 
-        renderHourly(data.hourly || {}, current.time || "");
+      function metric(label, value) {
+        return `
+          <div class="metric">
+            <div class="metric-label">${label}</div>
+            <div class="metric-value">${value}</div>
+          </div>
+        `;
       }
 
       function renderHourly(hourly, currentTime) {
         const times = Array.isArray(hourly.time) ? hourly.time : [];
         const startIndex = Math.max(0, times.findIndex((time) => !currentTime || time >= currentTime));
-        const cards = times.slice(startIndex, startIndex + 12).map((time, offset) => {
+        const cards = times.slice(startIndex, startIndex + 24).map((time, offset) => {
           const index = startIndex + offset;
-          const description = weatherDescription((hourly.weather_code || [])[index]);
-          const temperature = formatNumber((hourly.temperature_2m || [])[index], "C");
-          const rain = formatNumber((hourly.precipitation_probability || [])[index], "%");
+          const code = (hourly.weather_code || [])[index];
+          const nightClass = isNightTime(time) ? " night" : "";
           return `
-            <article class="hour">
+            <article class="hour-card${nightClass}">
               <div class="hour-time">${formatTime(time)}</div>
-              <div class="hour-temp">${temperature}</div>
-              <div class="hour-detail">${description}<br>Rain ${rain}</div>
+              <div class="hour-icon">${conditionIcon(code, time)}</div>
+              <div class="hour-temp">${formatNumber((hourly.temperature_2m || [])[index], "C")}</div>
+              <div class="hour-detail">Rain ${formatNumber((hourly.precipitation_probability || [])[index], "%")}</div>
             </article>
           `;
         });
 
-        elements.hourly.innerHTML = cards.join("") || "<p>No hourly forecast is available.</p>";
+        return `
+          <div class="hourly-title">Next 24 hours</div>
+          <p class="hourly-note">Swipe or scroll sideways to scan the full day.</p>
+          <div class="hour-strip">${cards.join("") || "<p>No hourly forecast is available.</p>"}</div>
+        `;
       }
-
-      loadWeather();
     </script>
   </body>
 </html>

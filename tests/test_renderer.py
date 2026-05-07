@@ -86,6 +86,26 @@ class RendererTests(unittest.TestCase):
         self.assertIn("Read story", body)
         self.assertIn("https://example.com/world", body)
 
+    def test_render_html_gives_story_summaries_five_line_digest_space(self) -> None:
+        weather = _weather("Johannesburg")
+        item = RankedItem(
+            title="Detailed story",
+            url="https://example.com/detailed",
+            source="Example",
+            summary=" ".join(f"word{index}" for index in range(120)),
+        )
+
+        body = render_html(
+            brief_date=datetime(2026, 5, 4),
+            weather_reports=[weather],
+            world_items=[item],
+            ai_tech_items=[],
+        )
+
+        self.assertIn("line-height:1.55", body)
+        self.assertIn("border-left:3px solid #cce8f0", body)
+        self.assertIn("min-height:109px", body)
+
     def test_render_html_rotates_hero_intro_by_date(self) -> None:
         weather = _weather("Johannesburg")
 

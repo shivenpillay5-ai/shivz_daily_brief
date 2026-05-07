@@ -4,10 +4,16 @@ import unittest
 from datetime import datetime, timezone
 
 from daily_brief.models import FeedItem
+from daily_brief.prompts.ranking_prompt import RANKING_INSTRUCTIONS
 from daily_brief.tools.ranking import _fallback_rank
 
 
 class RankerTests(unittest.TestCase):
+    def test_ranking_prompt_asks_for_fuller_reader_digests(self) -> None:
+        self.assertIn("five compact", RANKING_INSTRUCTIONS)
+        self.assertIn("85 to 120 words", RANKING_INSTRUCTIONS)
+        self.assertIn("without inventing", RANKING_INSTRUCTIONS)
+
     def test_fallback_rank_prefers_source_variety(self) -> None:
         published = datetime(2026, 5, 4, tzinfo=timezone.utc)
         items = [

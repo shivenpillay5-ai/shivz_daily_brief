@@ -9,7 +9,10 @@ Rules:
 - Do not invent titles, sources, or links.
 - Prefer recency, credibility, impact, and variety.
 - Avoid duplicates or multiple stories about the same underlying event.
-- Write one concise, neutral summary for each selected story.
+- Write each selected story summary as a fuller reader digest: aim for five compact
+  sentences and 85 to 120 words when the candidate gives enough detail.
+- Use only facts supported by the candidate title and summary. If the source detail
+  is thin, write the fullest faithful digest you can without inventing.
 - Return only JSON that matches the requested schema.
 """.strip()
 
@@ -22,4 +25,3 @@ Requested story count: {top_n}
 Candidates:
 {candidates_json}
 """.strip()
-

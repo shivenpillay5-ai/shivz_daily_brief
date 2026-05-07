@@ -62,7 +62,7 @@ def _rank_with_openai(
             top_n=min(top_n, len(candidates)),
             candidates_json=json.dumps(candidates, ensure_ascii=True, indent=2),
         ),
-        "max_output_tokens": 2000,
+        "max_output_tokens": 3500,
         "text": {
             "format": {
                 "type": "json_schema",
