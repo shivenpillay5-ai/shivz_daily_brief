@@ -128,6 +128,7 @@ class ConfigTests(unittest.TestCase):
             "COUPLE_SUBJECT_PREFIX": "Custom Couple Brief",
             "COUPLE_NAMES": "Shiv and spouse",
             "COUPLE_REMINDERS": "Check calendars;Confirm dinner plan",
+            "COUPLE_DAILY_READS_ENABLED": "false",
         },
         clear=True,
     )
@@ -144,6 +145,7 @@ class ConfigTests(unittest.TestCase):
             config.couple.reminders,
             ["Check calendars", "Confirm dinner plan"],
         )
+        self.assertFalse(config.couple.daily_reads_enabled)
 
     @patch.dict(
         "os.environ",

@@ -5,7 +5,12 @@ from __future__ import annotations
 import html
 from datetime import datetime
 
-from daily_brief.models import CalendarEvent, CoupleBriefContent
+from daily_brief.models import (
+    CalendarEvent,
+    CoupleBriefContent,
+    DailyFunFact,
+    HistoryMoment,
+)
 
 
 COUPLE_BRIEF_NAME = "Team ShiNola - Our Daily Brief"
@@ -17,6 +22,7 @@ def render_couple_text(
 ) -> str:
     reminder_lines = [f"- {reminder}" for reminder in content.reminders]
     calendar_lines = _calendar_text_lines(brief_date, content)
+    daily_read_lines = _daily_read_text_lines(content)
     ingredient_lines = [f"- {ingredient}" for ingredient in content.meal.ingredients]
     step_lines = [
         f"{index}. {step}"
@@ -27,10 +33,6 @@ def render_couple_text(
             f"{COUPLE_BRIEF_NAME} - {brief_date:%A, %d %B %Y}",
             "",
             f"Good morning, {content.names}.",
-            "",
-            *calendar_lines,
-            "Nudges:",
-            *reminder_lines,
             "",
             "Meal idea:",
             content.meal.title,
@@ -45,6 +47,11 @@ def render_couple_text(
             f"Prep note: {content.meal.prep_note}",
             f"{content.meal.image_credit} ({content.meal.image_credit_url})",
             "",
+            *calendar_lines,
+            "Nudges:",
+            *reminder_lines,
+            "",
+            *daily_read_lines,
             "This week's marriage spark:",
             content.spark.title,
             content.spark.motivation,
@@ -75,6 +82,7 @@ def render_couple_html(
     )
     calendar_events_html = _calendar_events_html(brief_date, content)
     calendar_note_html = _calendar_note_html(content)
+    daily_reads_html = _daily_reads_html(content)
     ingredients_html = "\n".join(
         f"<li style=\"margin:0 0 6px;color:#314251\">{html.escape(ingredient)}</li>"
         for ingredient in content.meal.ingredients
@@ -111,21 +119,7 @@ def render_couple_html(
                   Good morning, <strong>{html.escape(content.names)}</strong>.
                 </p>
 
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #e7d9c6;border-radius:16px;background:#fff8ee">
-                  <tr>
-                    <td style="padding:22px 24px">
-                      <div style="font-size:12px;color:#9b5a42;font-weight:850;text-transform:uppercase;letter-spacing:.8px">Calendar snapshot</div>
-                      {calendar_events_html}
-                      {calendar_note_html}
-                      <div style="margin-top:15px;font-size:12px;color:#9b5a42;font-weight:850;text-transform:uppercase;letter-spacing:.8px">Nudges</div>
-                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:8px">
-                        {reminders_html}
-                      </table>
-                    </td>
-                  </tr>
-                </table>
-
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:22px;border:1px solid #d7e7dc;border-radius:16px;background:#f4fbf6">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #d7e7dc;border-radius:16px;background:#f4fbf6">
                   {meal_image_html}
                   <tr>
                     <td style="padding:22px">
@@ -147,6 +141,22 @@ def render_couple_html(
                     </td>
                   </tr>
                 </table>
+
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:22px;border:1px solid #e7d9c6;border-radius:16px;background:#fff8ee">
+                  <tr>
+                    <td style="padding:22px 24px">
+                      <div style="font-size:12px;color:#9b5a42;font-weight:850;text-transform:uppercase;letter-spacing:.8px">Calendar snapshot</div>
+                      {calendar_events_html}
+                      {calendar_note_html}
+                      <div style="margin-top:15px;font-size:12px;color:#9b5a42;font-weight:850;text-transform:uppercase;letter-spacing:.8px">Nudges</div>
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:8px">
+                        {reminders_html}
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+
+                {daily_reads_html}
 
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:22px;border:1px solid #ead4d0;border-radius:16px;background:#fff6f4">
                   <tr>
@@ -182,6 +192,91 @@ def render_couple_html(
     </table>
   </body>
 </html>"""
+
+
+def _daily_read_text_lines(content: CoupleBriefContent) -> list[str]:
+    lines: list[str] = []
+    if content.history_moment:
+        lines.extend(
+            [
+                "What happened in history today:",
+                content.history_moment.title,
+                content.history_moment.paragraph,
+            ]
+        )
+        if content.history_moment.source and content.history_moment.source_url:
+            lines.append(
+                "Source: "
+                f"{content.history_moment.source} "
+                f"({content.history_moment.source_url})"
+            )
+        lines.append("")
+
+    if content.fun_fact:
+        lines.extend(
+            [
+                "Fun fact of the day:",
+                content.fun_fact.title,
+                content.fun_fact.body,
+                "",
+            ]
+        )
+    return lines
+
+
+def _daily_reads_html(content: CoupleBriefContent) -> str:
+    cards = [
+        _history_moment_html(content.history_moment),
+        _fun_fact_html(content.fun_fact),
+    ]
+    cards_html = "\n".join(card for card in cards if card)
+    if not cards_html:
+        return ""
+
+    return f"""
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:22px;border:1px solid #d4dde7;border-radius:16px;background:#f6f9fc">
+                  <tr>
+                    <td style="padding:22px 24px">
+                      {cards_html}
+                    </td>
+                  </tr>
+                </table>
+    """
+
+
+def _history_moment_html(moment: HistoryMoment | None) -> str:
+    if moment is None:
+        return ""
+
+    source_html = ""
+    if moment.source and moment.source_url:
+        source_html = f"""
+                      <p style="font-size:11px;line-height:1.4;margin:10px 0 0;color:#738290">
+                        Source: <a href="{html.escape(moment.source_url, quote=True)}" style="color:#516b7a;text-decoration:none">{html.escape(moment.source)}</a>
+                      </p>
+        """
+
+    return f"""
+                      <div>
+                        <div style="font-size:12px;color:#4c6980;font-weight:850;text-transform:uppercase;letter-spacing:.8px">What happened in history today</div>
+                        <h2 style="font-size:22px;line-height:1.2;margin:7px 0 10px;color:#223747">{html.escape(moment.title)}</h2>
+                        <p style="font-size:15px;line-height:1.58;margin:0;color:#314251">{html.escape(moment.paragraph)}</p>
+                        {source_html}
+                      </div>
+    """
+
+
+def _fun_fact_html(fun_fact: DailyFunFact | None) -> str:
+    if fun_fact is None:
+        return ""
+
+    return f"""
+                      <div style="margin-top:20px;padding-top:18px;border-top:1px solid #dbe5ec">
+                        <div style="font-size:12px;color:#4c6980;font-weight:850;text-transform:uppercase;letter-spacing:.8px">Fun fact of the day</div>
+                        <h2 style="font-size:22px;line-height:1.2;margin:7px 0 10px;color:#223747">{html.escape(fun_fact.title)}</h2>
+                        <p style="font-size:15px;line-height:1.58;margin:0;color:#314251">{html.escape(fun_fact.body)}</p>
+                      </div>
+    """
 
 
 def _calendar_text_lines(

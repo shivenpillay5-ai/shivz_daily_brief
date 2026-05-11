@@ -94,6 +94,21 @@ class MarriageSpark:
 
 
 @dataclass(frozen=True)
+class HistoryMoment:
+    title: str
+    paragraph: str
+    year: int | None = None
+    source: str = ""
+    source_url: str = ""
+
+
+@dataclass(frozen=True)
+class DailyFunFact:
+    title: str
+    body: str
+
+
+@dataclass(frozen=True)
 class CalendarEvent:
     calendar_id: str
     calendar_name: str
@@ -111,6 +126,8 @@ class CoupleBriefContent:
     meal: MealIdea
     spark: MarriageSpark
     closing: str
+    history_moment: HistoryMoment | None = None
+    fun_fact: DailyFunFact | None = None
     calendar_events: list[CalendarEvent] = field(default_factory=list)
     calendar_note: str = ""
 

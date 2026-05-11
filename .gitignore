@@ -10,6 +10,7 @@ dist/
 preview.html
 devotional-preview.html
 couple-preview.html
+couple-env-test-preview.html
 credentials.json
 token.json
 logs/

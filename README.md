@@ -10,7 +10,7 @@ This is a small learning project that builds a daily email brief with:
 - top 5 AI and tech story links
 - an approved WhatsApp template version of the daily brief
 - a separate Daily Motivation and Bible Verse email
-- a private couple brief with calendar nudges, a dish photo, a short recipe, and a weekly marriage spark
+- a private couple brief with calendar nudges, a daily history note, a fun fact, a dish photo, a short recipe, and a weekly marriage spark
 
 The project is intentionally split into simple modules so you can learn how a practical agent is built:
 
@@ -44,6 +44,7 @@ daily-brief-agent/
       summary.py   # prompt-based morning summary, with fallback summary
       devotional.py # scripture rotation and devotional reflection
       couple.py    # private couple brief content rotation
+      daily_reads.py # history and fun-fact snippets for the couple brief
       google_calendar.py # read-only Google Calendar OAuth and event fetching
       rendering.py # email text and HTML
       devotional_rendering.py # devotional text, HTML, and WhatsApp rendering
@@ -222,6 +223,11 @@ That opens a browser login and saves `token.json`. After that:
 ```
 
 The couple brief will show a calendar snapshot above the nudges. Both `credentials.json` and `token.json` are ignored by git.
+
+The couple brief also includes two compact daily reads: a "What happened in
+history today" note from Wikipedia's on-this-day feed, with a curated fallback
+if the feed is unavailable, and a deterministic local fun fact. Set
+`COUPLE_DAILY_READS_ENABLED=false` if you ever want to hide those sections.
 
 ## Scheduling At 07:00
 
@@ -415,7 +421,7 @@ The workflow uses `WHATSAPP_TEMPLATE_NAME=shivz_daily_brief_v1` and `WHATSAPP_TE
 
 `src/daily_brief/prompts/devotional_prompt.py` contains the devotional instruction. It gives the model one public-domain KJV verse and asks for a short practical reflection plus a broader motivational closing. If no OpenAI key is configured, the app uses the curated fallback reflection and motivational closing.
 
-The couple brief rotates meal ideas and short recipes daily, keeps one marriage spark for the week, renders configured calendar nudges from `COUPLE_REMINDERS`, and can optionally read Google Calendar events. Recipe photos are loaded from public Wikimedia Commons URLs.
+The couple brief rotates meal ideas and short recipes daily, keeps one marriage spark for the week, renders configured calendar nudges from `COUPLE_REMINDERS`, and can optionally read Google Calendar events. Recipe photos are loaded from public Wikimedia Commons URLs for previews and embedded inline when the couple email is sent.
 
 That separation is important:
 
@@ -458,6 +464,7 @@ COUPLE_EMAIL_TO=you@example.com,spouse@example.com
 COUPLE_SUBJECT_PREFIX=Team ShiNola - Our Daily Brief
 COUPLE_NAMES=you two
 COUPLE_REMINDERS=Check the shared Gmail calendars;Confirm one family handoff
+COUPLE_DAILY_READS_ENABLED=true
 
 GOOGLE_CALENDAR_ENABLED=true
 GOOGLE_CALENDAR_CREDENTIALS_FILE=credentials.json

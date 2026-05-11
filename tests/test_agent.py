@@ -27,6 +27,7 @@ from daily_brief.models import (
     WeatherReport,
     DevotionalContent,
 )
+from daily_brief.tools.email import InlineImage
 
 
 class AgentTests(unittest.TestCase):
@@ -138,15 +139,25 @@ class AgentTests(unittest.TestCase):
         self.assertIn("Chicken pesto wraps", brief.html_body)
         self.assertIn("Check the shared Gmail calendars.", brief.text_body)
 
+    @patch("daily_brief.agent.fetch_inline_image")
     @patch("daily_brief.agent.send_email")
     def test_agent_sends_couple_brief_to_couple_recipients(
         self,
         send_email_mock,
+        fetch_inline_image_mock,
     ) -> None:
+        inline_image = InlineImage(
+            content_id="couple-meal-image@daily-brief-agent",
+            data=b"image",
+            maintype="image",
+            subtype="jpeg",
+            filename="chicken-pesto-wraps.jpg",
+        )
+        fetch_inline_image_mock.return_value = inline_image
         brief = CoupleBrief(
             subject="Team ShiNola - Our Daily Brief - 2026-05-04",
             text_body="text",
-            html_body="<p>text</p>",
+            html_body='<p>text</p><img src="https://example.com/chicken-wrap.jpg">',
             content=_couple_content(),
         )
 
@@ -155,6 +166,30 @@ class AgentTests(unittest.TestCase):
         args, kwargs = send_email_mock.call_args
         self.assertEqual(args[0].email_to, ["spouse@example.com"])
         self.assertEqual(kwargs["subject"], brief.subject)
+        self.assertIn("cid:couple-meal-image@daily-brief-agent", kwargs["html_body"])
+        self.assertNotIn("https://example.com/chicken-wrap.jpg", kwargs["html_body"])
+        self.assertEqual(kwargs["inline_images"], [inline_image])
+
+    @patch("daily_brief.agent.fetch_inline_image")
+    @patch("daily_brief.agent.send_email")
+    def test_agent_sends_couple_brief_when_inline_image_fetch_fails(
+        self,
+        send_email_mock,
+        fetch_inline_image_mock,
+    ) -> None:
+        fetch_inline_image_mock.side_effect = RuntimeError("image unavailable")
+        brief = CoupleBrief(
+            subject="Team ShiNola - Our Daily Brief - 2026-05-04",
+            text_body="text",
+            html_body='<p>text</p><img src="https://example.com/chicken-wrap.jpg">',
+            content=_couple_content(),
+        )
+
+        DailyBriefAgent(_config()).send_couple(brief)
+
+        _, kwargs = send_email_mock.call_args
+        self.assertIn("https://example.com/chicken-wrap.jpg", kwargs["html_body"])
+        self.assertEqual(kwargs["inline_images"], [])
 
     @patch("daily_brief.agent.send_email")
     def test_agent_sends_devotional_brief_to_devotional_recipients(

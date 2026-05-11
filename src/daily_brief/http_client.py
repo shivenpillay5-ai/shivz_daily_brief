@@ -25,6 +25,19 @@ def get_json(url: str, timeout_seconds: int = 20) -> dict[str, Any]:
     return json.loads(get_text(url, timeout_seconds=timeout_seconds))
 
 
+def get_bytes(url: str, timeout_seconds: int = 20) -> tuple[bytes, str]:
+    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    try:
+        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
+            content_type = response.headers.get("Content-Type", "")
+            media_type = content_type.split(";", 1)[0].strip().lower()
+            return response.read(), media_type
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError(f"HTTP {exc.code} while fetching {url}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Could not fetch {url}: {exc.reason}") from exc
+
+
 def post_json(
     url: str,
     payload: dict[str, Any],
@@ -46,4 +59,3 @@ def post_json(
         raise RuntimeError(f"HTTP {exc.code} from {url}: {error_body}") from exc
     except urllib.error.URLError as exc:
         raise RuntimeError(f"Could not post to {url}: {exc.reason}") from exc
-

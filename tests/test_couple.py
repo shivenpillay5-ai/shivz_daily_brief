@@ -16,7 +16,7 @@ from daily_brief.config import (
     LocationConfig,
     WhatsAppConfig,
 )
-from daily_brief.models import CalendarEvent
+from daily_brief.models import CalendarEvent, DailyFunFact, HistoryMoment
 from daily_brief.tools.couple import (
     build_couple_brief,
     select_daily_meal,
@@ -39,6 +39,8 @@ class CoupleBriefTests(unittest.TestCase):
         self.assertTrue(content.meal.image_url)
         self.assertTrue(content.spark.title)
         self.assertTrue(content.closing)
+        self.assertIsNone(content.history_moment)
+        self.assertIsNone(content.fun_fact)
 
     def test_meal_rotates_daily(self) -> None:
         first = select_daily_meal(datetime(2026, 5, 4))
@@ -51,6 +53,35 @@ class CoupleBriefTests(unittest.TestCase):
         friday = select_weekly_marriage_spark(datetime(2026, 5, 8))
 
         self.assertEqual(monday, friday)
+
+    @patch("daily_brief.tools.couple.select_daily_fun_fact")
+    @patch("daily_brief.tools.couple.build_daily_history_moment")
+    def test_build_couple_brief_adds_daily_reads_when_enabled(
+        self,
+        build_daily_history_moment_mock,
+        select_daily_fun_fact_mock,
+    ) -> None:
+        build_daily_history_moment_mock.return_value = HistoryMoment(
+            title="1969: Apollo 11",
+            paragraph="On this date in 1969, humans landed on the Moon.",
+            year=1969,
+            source="Wikipedia",
+            source_url="https://example.com/apollo-11",
+        )
+        select_daily_fun_fact_mock.return_value = DailyFunFact(
+            title="The dot has a name",
+            body="The small dot above a lowercase i or j is called a tittle.",
+        )
+
+        content = build_couple_brief(
+            brief_date=datetime(2026, 5, 4),
+            config=_config(daily_reads_enabled=True),
+        )
+
+        self.assertEqual(content.history_moment.title, "1969: Apollo 11")
+        self.assertEqual(content.fun_fact.title, "The dot has a name")
+        build_daily_history_moment_mock.assert_called_once()
+        select_daily_fun_fact_mock.assert_called_once()
 
     @patch("daily_brief.tools.couple.fetch_google_calendar_events")
     def test_build_couple_brief_fetches_google_calendar_when_enabled(
@@ -89,7 +120,10 @@ class CoupleBriefTests(unittest.TestCase):
         self.assertIn("Google Calendar could not be read", content.calendar_note)
 
 
-def _config(google_enabled: bool = False) -> AppConfig:
+def _config(
+    google_enabled: bool = False,
+    daily_reads_enabled: bool = False,
+) -> AppConfig:
     google_calendar = GoogleCalendarConfig(
         enabled=google_enabled,
         credentials_file=Path("credentials.json"),
@@ -129,6 +163,7 @@ def _config(google_enabled: bool = False) -> AppConfig:
             subject_prefix="Team ShiNola - Our Daily Brief",
             names="you two",
             reminders=["Check calendars", "Confirm dinner"],
+            daily_reads_enabled=daily_reads_enabled,
         ),
         google_calendar=google_calendar,
         news_feeds=[FeedConfig(name="News", url="https://example.com/rss")],

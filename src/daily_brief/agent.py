@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 from dataclasses import dataclass, replace
 from datetime import datetime
 
@@ -19,7 +20,8 @@ from daily_brief.tools.devotional_rendering import (
     render_devotional_text,
     render_devotional_whatsapp_text,
 )
-from daily_brief.tools.email import send_email
+from daily_brief.tools.email import InlineImage, send_email
+from daily_brief.tools.email_images import fetch_inline_image
 from daily_brief.tools.google_calendar import authorize_google_calendar
 from daily_brief.tools.market import fetch_market_pulse
 from daily_brief.tools.news import fetch_feed_items
@@ -62,6 +64,9 @@ class CoupleBrief:
     text_body: str
     html_body: str
     content: CoupleBriefContent
+
+
+COUPLE_MEAL_IMAGE_CID = "couple-meal-image@daily-brief-agent"
 
 
 class DailyBriefAgent:
@@ -232,11 +237,13 @@ class DailyBriefAgent:
             raise ValueError("COUPLE_EMAIL_TO must be set before sending the couple brief.")
 
         couple_email = replace(self.config.email, email_to=self.config.couple.email_to)
+        html_body, inline_images = _prepare_couple_email_images(brief)
         send_email(
             couple_email,
             subject=brief.subject,
             text_body=brief.text_body,
-            html_body=brief.html_body,
+            html_body=html_body,
+            inline_images=inline_images,
         )
 
     def send_devotional_whatsapp(self, brief: DevotionalBrief) -> None:
@@ -269,3 +276,27 @@ class DailyBriefAgent:
             run_url=run_url,
             alert_name=alert_name,
         )
+
+
+def _prepare_couple_email_images(brief: CoupleBrief) -> tuple[str, list[InlineImage]]:
+    image_url = brief.content.meal.image_url
+    if not image_url:
+        return brief.html_body, []
+
+    try:
+        inline_image = fetch_inline_image(
+            image_url,
+            content_id=COUPLE_MEAL_IMAGE_CID,
+            filename_stem=brief.content.meal.title,
+        )
+    except Exception as exc:
+        print(f"Could not embed couple meal image; using remote URL instead: {exc}")
+        return brief.html_body, []
+
+    escaped_image_url = html.escape(image_url, quote=True)
+    html_body = brief.html_body.replace(
+        escaped_image_url,
+        f"cid:{COUPLE_MEAL_IMAGE_CID}",
+        1,
+    )
+    return html_body, [inline_image]

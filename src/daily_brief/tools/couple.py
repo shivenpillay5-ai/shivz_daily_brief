@@ -7,6 +7,10 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from daily_brief.config import AppConfig
 from daily_brief.models import CoupleBriefContent, MarriageSpark, MealIdea
+from daily_brief.tools.daily_reads import (
+    build_daily_history_moment,
+    select_daily_fun_fact,
+)
 from daily_brief.tools.google_calendar import fetch_google_calendar_events
 
 
@@ -463,6 +467,13 @@ def build_couple_brief(
 ) -> CoupleBriefContent:
     calendar_events = []
     calendar_note = ""
+    history_moment = None
+    fun_fact = None
+
+    if config.couple.daily_reads_enabled:
+        history_moment = build_daily_history_moment(brief_date)
+        fun_fact = select_daily_fun_fact(brief_date)
+
     if config.google_calendar.enabled:
         start_datetime, end_datetime = _calendar_window(brief_date, config)
         try:
@@ -481,6 +492,8 @@ def build_couple_brief(
         meal=select_daily_meal(brief_date),
         spark=select_weekly_marriage_spark(brief_date),
         closing=select_daily_closing(brief_date),
+        history_moment=history_moment,
+        fun_fact=fun_fact,
         calendar_events=calendar_events,
         calendar_note=calendar_note,
     )

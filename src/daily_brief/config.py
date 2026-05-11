@@ -76,6 +76,7 @@ class CoupleBriefConfig:
     subject_prefix: str
     names: str
     reminders: list[str]
+    daily_reads_enabled: bool = True
 
 
 @dataclass(frozen=True)
@@ -184,6 +185,7 @@ def load_config(env_file: Path | None = None) -> AppConfig:
                     ),
                 )
             ),
+            daily_reads_enabled=_get_bool("COUPLE_DAILY_READS_ENABLED", True),
         ),
         google_calendar=GoogleCalendarConfig(
             enabled=_get_bool("GOOGLE_CALENDAR_ENABLED", False),
