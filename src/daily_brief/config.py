@@ -226,7 +226,12 @@ def load_config(env_file: Path | None = None) -> AppConfig:
             daily_reads_enabled=_get_bool("COUPLE_DAILY_READS_ENABLED", True),
         ),
         grocery_specials=GrocerySpecialsConfig(
-            email_to=_split_csv(_get("GROCERY_SPECIALS_EMAIL_TO", "")),
+            email_to=_split_csv(
+                _get_any(
+                    ("GROCERY_SPECIALS_EMAIL", "GROCERY_SPECIALS_EMAIL_TO"),
+                    "",
+                )
+            ),
             subject_prefix=_get(
                 "GROCERY_SPECIALS_SUBJECT_PREFIX",
                 "Midrand Grocery Specials",
@@ -285,6 +290,14 @@ def _get(name: str, default: str) -> str:
     if value is None or value.strip() == "":
         return default
     return value.strip()
+
+
+def _get_any(names: tuple[str, ...], default: str) -> str:
+    for name in names:
+        value = os.getenv(name)
+        if value is not None and value.strip() != "":
+            return value.strip()
+    return default
 
 
 def _get_bool(name: str, default: bool) -> bool:

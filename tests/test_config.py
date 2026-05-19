@@ -150,7 +150,7 @@ class ConfigTests(unittest.TestCase):
     @patch.dict(
         "os.environ",
         {
-            "GROCERY_SPECIALS_EMAIL_TO": "shopper@example.com,wife@example.com",
+            "GROCERY_SPECIALS_EMAIL": "shopper@example.com,wife@example.com",
             "GROCERY_SPECIALS_SUBJECT_PREFIX": "Month-end Specials",
             "GROCERY_SPECIALS_AREA": "Midrand",
             "GROCERY_SPECIALS_SOURCES": (
@@ -191,6 +191,19 @@ class ConfigTests(unittest.TestCase):
                 ("Pick n Pay", "Pick n Pay", "https://example.com/pnp"),
             ],
         )
+
+    @patch.dict(
+        "os.environ",
+        {
+            "GROCERY_SPECIALS_EMAIL": "",
+            "GROCERY_SPECIALS_EMAIL_TO": "legacy@example.com",
+        },
+        clear=True,
+    )
+    def test_legacy_grocery_specials_email_to_is_supported(self) -> None:
+        config = load_config()
+
+        self.assertEqual(config.grocery_specials.email_to, ["legacy@example.com"])
 
     @patch.dict(
         "os.environ",

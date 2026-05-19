@@ -294,7 +294,7 @@ class DailyBriefAgent:
         )
         if not email_to:
             raise ValueError(
-                "Set GROCERY_SPECIALS_EMAIL_TO, COUPLE_EMAIL_TO, or EMAIL_TO before sending."
+                "Set GROCERY_SPECIALS_EMAIL, COUPLE_EMAIL_TO, or EMAIL_TO before sending."
             )
 
         grocery_email = replace(self.config.email, email_to=email_to)

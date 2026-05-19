@@ -207,7 +207,7 @@ daily-brief --grocery-specials --send
 ```
 
 The grocery pack reads `GROCERY_SPECIALS_SOURCES`, groups results by store, and
-writes PDFs into `GROCERY_SPECIALS_OUTPUT_DIR`. If `GROCERY_SPECIALS_EMAIL_TO`
+writes PDFs into `GROCERY_SPECIALS_OUTPUT_DIR`. If `GROCERY_SPECIALS_EMAIL`
 is empty, sending falls back to `COUPLE_EMAIL_TO`, then `EMAIL_TO`.
 
 ## Google Calendar Setup For The Couple Brief
@@ -395,7 +395,7 @@ These optional repository secrets let each email type use the right audience:
 
 ```text
 DEVOTIONAL_EMAIL_TO
-GROCERY_SPECIALS_EMAIL_TO
+GROCERY_SPECIALS_EMAIL
 ALERT_EMAIL_TO
 ```
 
@@ -502,7 +502,7 @@ COUPLE_NAMES=you two
 COUPLE_REMINDERS=Check the shared Gmail calendars;Confirm one family handoff
 COUPLE_DAILY_READS_ENABLED=true
 
-GROCERY_SPECIALS_EMAIL_TO=
+GROCERY_SPECIALS_EMAIL=
 GROCERY_SPECIALS_SUBJECT_PREFIX=Midrand Grocery Specials
 GROCERY_SPECIALS_AREA=Midrand, Gauteng
 GROCERY_SPECIALS_MAX_ITEMS_PER_STORE=120

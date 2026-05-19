@@ -20,6 +20,7 @@ jobs:
       EMAIL_TO: ${{ secrets.EMAIL_TO }}
       ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
 
+      GROCERY_SPECIALS_EMAIL: ${{ secrets.GROCERY_SPECIALS_EMAIL }}
       GROCERY_SPECIALS_EMAIL_TO: ${{ secrets.GROCERY_SPECIALS_EMAIL_TO }}
       GROCERY_SPECIALS_SUBJECT_PREFIX: "Midrand Grocery Specials"
       GROCERY_SPECIALS_AREA: "Midrand, Gauteng"
