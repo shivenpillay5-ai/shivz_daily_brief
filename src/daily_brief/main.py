@@ -26,6 +26,11 @@ def main() -> None:
         action="store_true",
         help="Build the private couple email instead of the news brief.",
     )
+    parser.add_argument(
+        "--grocery-specials",
+        action="store_true",
+        help="Build the monthly grocery specials email with store PDF attachments.",
+    )
     parser.add_argument("--send", action="store_true", help="Send email instead of previewing.")
     parser.add_argument(
         "--send-whatsapp",
@@ -74,10 +79,13 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    if args.devotional and args.couple:
-        parser.error("Choose only one mode: --devotional or --couple.")
+    selected_modes = [args.devotional, args.couple, args.grocery_specials]
+    if sum(1 for selected in selected_modes if selected) > 1:
+        parser.error("Choose only one mode: --devotional, --couple, or --grocery-specials.")
     if args.couple and (args.send_whatsapp or args.send_whatsapp_template):
         parser.error("--couple is email-only for now; use --couple --send.")
+    if args.grocery_specials and (args.send_whatsapp or args.send_whatsapp_template):
+        parser.error("--grocery-specials is email-only for now; use --grocery-specials --send.")
     if args.devotional and args.send_whatsapp_template:
         parser.error("--send-whatsapp-template is only for the news brief.")
 
@@ -158,6 +166,32 @@ def main() -> None:
         print(brief.text_body)
         print("")
         print("Run with --couple --send when COUPLE_EMAIL_TO is ready.")
+        return
+
+    if args.grocery_specials:
+        brief = agent.build_grocery_specials(brief_date=brief_date)
+
+        if args.save_html:
+            args.save_html.write_text(brief.html_body, encoding="utf-8")
+            print(f"Saved grocery specials HTML preview to {args.save_html}")
+
+        if args.send:
+            print("Sending grocery specials email...")
+            agent.send_grocery_specials(brief)
+            print("Grocery specials email sent.")
+            return
+
+        print("")
+        print("=" * 72)
+        print(f"Grocery specials preview only. Subject: {brief.subject}")
+        print("=" * 72)
+        print(brief.text_body)
+        print("")
+        print("Generated documents:")
+        for path in brief.document_paths:
+            print(f"- {path}")
+        print("")
+        print("Run with --grocery-specials --send when recipients are ready.")
         return
 
     brief = agent.build(brief_date=brief_date, use_openai=use_openai)

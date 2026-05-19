@@ -28,6 +28,13 @@ DEFAULT_WEATHER_LOCATIONS = (
     "Durban|-29.8587|31.0218|Africa/Johannesburg"
 )
 
+DEFAULT_GROCERY_SOURCES = (
+    "Woolworths|Woolworths Food Promotions|"
+    "https://www.woolworths.co.za/cat/Promotions/Save/Food/_/N-1z13sk5;"
+    "Checkers|My Catalogue Product Table|https://my-catalogue.co.za/checkers-specials;"
+    "Pick n Pay|My Catalogue Product Table|https://my-catalogue.co.za/pick-n-pay-specials"
+)
+
 
 @dataclass(frozen=True)
 class FeedConfig:
@@ -80,6 +87,34 @@ class CoupleBriefConfig:
 
 
 @dataclass(frozen=True)
+class GrocerySourceConfig:
+    store_name: str
+    source_name: str
+    url: str
+
+
+@dataclass(frozen=True)
+class GrocerySpecialsConfig:
+    email_to: list[str]
+    subject_prefix: str
+    area: str
+    sources: list[GrocerySourceConfig]
+    max_items_per_store: int
+    output_dir: Path
+
+
+def _default_grocery_specials_config() -> GrocerySpecialsConfig:
+    return GrocerySpecialsConfig(
+        email_to=[],
+        subject_prefix="Midrand Grocery Specials",
+        area="Midrand, Gauteng",
+        sources=_parse_grocery_sources(DEFAULT_GROCERY_SOURCES),
+        max_items_per_store=120,
+        output_dir=Path("grocery-specials"),
+    )
+
+
+@dataclass(frozen=True)
 class CalendarSourceConfig:
     calendar_id: str
     label: str
@@ -110,6 +145,9 @@ class AppConfig:
     market_pulse_enabled: bool
     weather_locations: list[LocationConfig] = field(default_factory=list)
     devotional_subject_prefix: str = "Daily Motivation and Bible Verse"
+    grocery_specials: GrocerySpecialsConfig = field(
+        default_factory=_default_grocery_specials_config
+    )
 
 
 def load_env_file(path: Path, override: bool = False) -> None:
@@ -186,6 +224,25 @@ def load_config(env_file: Path | None = None) -> AppConfig:
                 )
             ),
             daily_reads_enabled=_get_bool("COUPLE_DAILY_READS_ENABLED", True),
+        ),
+        grocery_specials=GrocerySpecialsConfig(
+            email_to=_split_csv(_get("GROCERY_SPECIALS_EMAIL_TO", "")),
+            subject_prefix=_get(
+                "GROCERY_SPECIALS_SUBJECT_PREFIX",
+                "Midrand Grocery Specials",
+            ),
+            area=_get("GROCERY_SPECIALS_AREA", "Midrand, Gauteng"),
+            sources=_parse_grocery_sources(
+                _get("GROCERY_SPECIALS_SOURCES", DEFAULT_GROCERY_SOURCES)
+            ),
+            max_items_per_store=max(
+                1,
+                int(_get("GROCERY_SPECIALS_MAX_ITEMS_PER_STORE", "120")),
+            ),
+            output_dir=_project_path(
+                project_root,
+                _get("GROCERY_SPECIALS_OUTPUT_DIR", "grocery-specials"),
+            ),
         ),
         google_calendar=GoogleCalendarConfig(
             enabled=_get_bool("GOOGLE_CALENDAR_ENABLED", False),
@@ -300,6 +357,36 @@ def _parse_feeds(value: str) -> list[FeedConfig]:
         feeds.append(FeedConfig(name=name.strip(), url=url.strip()))
 
     return feeds
+
+
+def _parse_grocery_sources(value: str) -> list[GrocerySourceConfig]:
+    sources: list[GrocerySourceConfig] = []
+    for raw_part in value.split(";"):
+        part = raw_part.strip()
+        if not part:
+            continue
+
+        pieces = [piece.strip() for piece in part.split("|")]
+        if len(pieces) == 2:
+            store_name, url = pieces
+            source_name = store_name
+        elif len(pieces) == 3:
+            store_name, source_name, url = pieces
+        else:
+            raise ValueError(
+                "Grocery source must be Store|URL or Store|Source name|URL"
+            )
+
+        if store_name and url:
+            sources.append(
+                GrocerySourceConfig(
+                    store_name=store_name,
+                    source_name=source_name or store_name,
+                    url=url,
+                )
+            )
+
+    return sources
 
 
 def _parse_locations(value: str) -> list[LocationConfig]:

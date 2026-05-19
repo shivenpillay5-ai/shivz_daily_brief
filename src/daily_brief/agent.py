@@ -3,11 +3,13 @@ from __future__ import annotations
 import html
 from dataclasses import dataclass, replace
 from datetime import datetime
+from pathlib import Path
 
 from daily_brief.config import AppConfig
 from daily_brief.models import (
     CoupleBriefContent,
     DevotionalContent,
+    GrocerySpecialsContent,
     MarketPulse,
     MorningSummary,
 )
@@ -20,9 +22,15 @@ from daily_brief.tools.devotional_rendering import (
     render_devotional_text,
     render_devotional_whatsapp_text,
 )
-from daily_brief.tools.email import InlineImage, send_email
+from daily_brief.tools.email import EmailAttachment, InlineImage, send_email
 from daily_brief.tools.email_images import fetch_inline_image
 from daily_brief.tools.google_calendar import authorize_google_calendar
+from daily_brief.tools.grocery_rendering import (
+    render_grocery_html,
+    render_grocery_text,
+    write_grocery_store_pdfs,
+)
+from daily_brief.tools.grocery_specials import build_grocery_specials
 from daily_brief.tools.market import fetch_market_pulse
 from daily_brief.tools.news import fetch_feed_items
 from daily_brief.tools.ranking import rank_items
@@ -64,6 +72,15 @@ class CoupleBrief:
     text_body: str
     html_body: str
     content: CoupleBriefContent
+
+
+@dataclass(frozen=True)
+class GrocerySpecialsBrief:
+    subject: str
+    text_body: str
+    html_body: str
+    content: GrocerySpecialsContent
+    document_paths: list[str]
 
 
 COUPLE_MEAL_IMAGE_CID = "couple-meal-image@daily-brief-agent"
@@ -209,6 +226,29 @@ class DailyBriefAgent:
             content=content,
         )
 
+    def build_grocery_specials(self, brief_date: datetime) -> GrocerySpecialsBrief:
+        print("Fetching grocery specials...")
+        content = build_grocery_specials(
+            brief_date=brief_date,
+            config=self.config.grocery_specials,
+        )
+        document_paths = write_grocery_store_pdfs(
+            brief_date=brief_date,
+            content=content,
+            output_dir=self.config.grocery_specials.output_dir,
+        )
+        subject = (
+            f"{self.config.grocery_specials.subject_prefix} - "
+            f"{brief_date:%Y-%m-%d}"
+        )
+        return GrocerySpecialsBrief(
+            subject=subject,
+            text_body=render_grocery_text(brief_date, content),
+            html_body=render_grocery_html(brief_date, content),
+            content=content,
+            document_paths=[str(path) for path in document_paths],
+        )
+
     def send(self, brief: Brief) -> None:
         send_email(
             self.config.email,
@@ -244,6 +284,35 @@ class DailyBriefAgent:
             text_body=brief.text_body,
             html_body=html_body,
             inline_images=inline_images,
+        )
+
+    def send_grocery_specials(self, brief: GrocerySpecialsBrief) -> None:
+        email_to = (
+            self.config.grocery_specials.email_to
+            or self.config.couple.email_to
+            or self.config.email.email_to
+        )
+        if not email_to:
+            raise ValueError(
+                "Set GROCERY_SPECIALS_EMAIL_TO, COUPLE_EMAIL_TO, or EMAIL_TO before sending."
+            )
+
+        grocery_email = replace(self.config.email, email_to=email_to)
+        attachments = [
+            EmailAttachment(
+                data=_read_document(path),
+                maintype="application",
+                subtype="pdf",
+                filename=path.rsplit("\\", 1)[-1].rsplit("/", 1)[-1],
+            )
+            for path in brief.document_paths
+        ]
+        send_email(
+            grocery_email,
+            subject=brief.subject,
+            text_body=brief.text_body,
+            html_body=brief.html_body,
+            attachments=attachments,
         )
 
     def send_devotional_whatsapp(self, brief: DevotionalBrief) -> None:
@@ -300,3 +369,7 @@ def _prepare_couple_email_images(brief: CoupleBrief) -> tuple[str, list[InlineIm
         1,
     )
     return html_body, [inline_image]
+
+
+def _read_document(path: str) -> bytes:
+    return Path(path).read_bytes()

@@ -11,6 +11,7 @@ This is a small learning project that builds a daily email brief with:
 - an approved WhatsApp template version of the daily brief
 - a separate Daily Motivation and Bible Verse email
 - a private couple brief with calendar nudges, a daily history note, a fun fact, a dish photo, a short recipe, and a weekly marriage spark
+- a monthly Midrand grocery-specials scan with store-specific PDF attachments
 
 The project is intentionally split into simple modules so you can learn how a practical agent is built:
 
@@ -22,7 +23,8 @@ The project is intentionally split into simple modules so you can learn how a pr
 6. Schedule it to run daily at 07:00.
 7. Build a separate devotional email from a scripture prompt.
 8. Build a private couple email for you and your spouse.
-9. Alert you if the scheduled run fails after retries.
+9. Build a monthly grocery-specials pack for Pick n Pay, Checkers, and Woolworths.
+10. Alert you if the scheduled run fails after retries.
 
 ## Project Map
 
@@ -46,9 +48,11 @@ daily-brief-agent/
       couple.py    # private couple brief content rotation
       daily_reads.py # history and fun-fact snippets for the couple brief
       google_calendar.py # read-only Google Calendar OAuth and event fetching
+      grocery_specials.py # scrapes configured grocery-specials sources
       rendering.py # email text and HTML
       devotional_rendering.py # devotional text, HTML, and WhatsApp rendering
       couple_rendering.py # couple brief text and HTML rendering
+      grocery_rendering.py # grocery HTML email and per-store PDFs
       email.py     # SMTP sending
       alerts.py    # failure alert email
       whatsapp.py  # WhatsApp Cloud API sending
@@ -184,6 +188,28 @@ daily-brief --couple --send
 `--couple --send` uses `COUPLE_EMAIL_TO`, not `EMAIL_TO`, so the private note does not accidentally go to the wider family list.
 Multiple `COUPLE_EMAIL_TO` addresses are also sent privately.
 
+Preview the monthly grocery-specials pack:
+
+```powershell
+daily-brief --grocery-specials
+```
+
+Preview the grocery HTML email:
+
+```powershell
+daily-brief --grocery-specials --save-html grocery-preview.html
+```
+
+Send the grocery-specials email with store-specific PDF attachments:
+
+```powershell
+daily-brief --grocery-specials --send
+```
+
+The grocery pack reads `GROCERY_SPECIALS_SOURCES`, groups results by store, and
+writes PDFs into `GROCERY_SPECIALS_OUTPUT_DIR`. If `GROCERY_SPECIALS_EMAIL_TO`
+is empty, sending falls back to `COUPLE_EMAIL_TO`, then `EMAIL_TO`.
+
 ## Google Calendar Setup For The Couple Brief
 
 The Google Calendar integration is read-only. It uses Google's Calendar API Python OAuth pattern with the `https://www.googleapis.com/auth/calendar.readonly` scope.
@@ -285,6 +311,7 @@ Each workflow also supports `repository_dispatch` as a fallback trigger for an e
 daily-brief
 daily-devotional
 team-shinola-brief
+grocery-specials
 ```
 
 ### External Scheduler Fallback
@@ -311,7 +338,7 @@ $env:GITHUB_DISPATCH_TOKEN = "paste-token-here"
 
 The command should print `Dispatched 'daily-brief'...` and GitHub Actions should show a new `repository_dispatch` run.
 
-Then create three external scheduler jobs. `cron-job.org` is a simple free option that supports custom HTTP methods, headers, body data, test runs, and execution history.
+Then create external scheduler jobs. `cron-job.org` is a simple free option that supports custom HTTP methods, headers, body data, test runs, and execution history.
 
 Use this URL for all three jobs:
 
@@ -348,7 +375,13 @@ Create these request bodies and schedules:
 
 09:17 Africa/Johannesburg
 
-If the scheduler only accepts UTC, use `05:17`, `05:29`, and `07:17` UTC.
+```json
+{"event_type":"grocery-specials"}
+```
+
+Monthly on the 26th at 18:17 Africa/Johannesburg.
+
+If the scheduler only accepts UTC, use `05:17`, `05:29`, `07:17`, and `16:17` UTC.
 
 The Team ShiNola workflow needs these repository secrets:
 
@@ -362,10 +395,13 @@ These optional repository secrets let each email type use the right audience:
 
 ```text
 DEVOTIONAL_EMAIL_TO
+GROCERY_SPECIALS_EMAIL_TO
 ALERT_EMAIL_TO
 ```
 
-If either optional secret is left empty, the app falls back to `EMAIL_TO`.
+If an optional recipient secret is left empty, the app falls back to `EMAIL_TO`
+for the daily/devotional emails and to `COUPLE_EMAIL_TO`, then `EMAIL_TO`, for
+the grocery-specials email.
 
 Create the two Google Calendar secret values from the local OAuth files:
 
@@ -465,6 +501,13 @@ COUPLE_SUBJECT_PREFIX=Team ShiNola - Our Daily Brief
 COUPLE_NAMES=you two
 COUPLE_REMINDERS=Check the shared Gmail calendars;Confirm one family handoff
 COUPLE_DAILY_READS_ENABLED=true
+
+GROCERY_SPECIALS_EMAIL_TO=
+GROCERY_SPECIALS_SUBJECT_PREFIX=Midrand Grocery Specials
+GROCERY_SPECIALS_AREA=Midrand, Gauteng
+GROCERY_SPECIALS_MAX_ITEMS_PER_STORE=120
+GROCERY_SPECIALS_OUTPUT_DIR=grocery-specials
+GROCERY_SPECIALS_SOURCES=Woolworths|Woolworths Food Promotions|https://www.woolworths.co.za/cat/Promotions/Save/Food/_/N-1z13sk5;Checkers|My Catalogue Product Table|https://my-catalogue.co.za/checkers-specials;Pick n Pay|My Catalogue Product Table|https://my-catalogue.co.za/pick-n-pay-specials
 
 GOOGLE_CALENDAR_ENABLED=true
 GOOGLE_CALENDAR_CREDENTIALS_FILE=credentials.json

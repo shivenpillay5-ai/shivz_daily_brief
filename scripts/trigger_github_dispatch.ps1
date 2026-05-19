@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet("daily-brief", "daily-devotional", "team-shinola-brief")]
+    [ValidateSet("daily-brief", "daily-devotional", "team-shinola-brief", "grocery-specials")]
     [string]$EventType,
 
     [string]$Owner = "shivenpillay5-ai",

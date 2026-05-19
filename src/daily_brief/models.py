@@ -133,6 +133,34 @@ class CoupleBriefContent:
 
 
 @dataclass(frozen=True)
+class GrocerySpecial:
+    store_name: str
+    item_name: str
+    price: str
+    promotion: str = ""
+    validity: str = ""
+    source_name: str = ""
+    source_url: str = ""
+
+
+@dataclass(frozen=True)
+class GroceryStoreSpecials:
+    store_name: str
+    area: str
+    specials: list[GrocerySpecial] = field(default_factory=list)
+    source_urls: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class GrocerySpecialsContent:
+    area: str
+    generated_at: datetime
+    stores: list[GroceryStoreSpecials] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class FeedItem:
     title: str
     url: str

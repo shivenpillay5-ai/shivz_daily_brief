@@ -150,6 +150,51 @@ class ConfigTests(unittest.TestCase):
     @patch.dict(
         "os.environ",
         {
+            "GROCERY_SPECIALS_EMAIL_TO": "shopper@example.com,wife@example.com",
+            "GROCERY_SPECIALS_SUBJECT_PREFIX": "Month-end Specials",
+            "GROCERY_SPECIALS_AREA": "Midrand",
+            "GROCERY_SPECIALS_SOURCES": (
+                "Checkers|Checkers Specials|https://example.com/checkers;"
+                "Pick n Pay|https://example.com/pnp"
+            ),
+            "GROCERY_SPECIALS_MAX_ITEMS_PER_STORE": "40",
+            "GROCERY_SPECIALS_OUTPUT_DIR": "reports/grocery",
+        },
+        clear=True,
+    )
+    def test_grocery_specials_config_is_parsed(self) -> None:
+        config = load_config()
+
+        self.assertEqual(
+            config.grocery_specials.email_to,
+            ["shopper@example.com", "wife@example.com"],
+        )
+        self.assertEqual(config.grocery_specials.subject_prefix, "Month-end Specials")
+        self.assertEqual(config.grocery_specials.area, "Midrand")
+        self.assertEqual(config.grocery_specials.max_items_per_store, 40)
+        self.assertTrue(
+            str(config.grocery_specials.output_dir)
+            .replace("\\", "/")
+            .endswith("reports/grocery")
+        )
+        self.assertEqual(
+            [
+                (source.store_name, source.source_name, source.url)
+                for source in config.grocery_specials.sources
+            ],
+            [
+                (
+                    "Checkers",
+                    "Checkers Specials",
+                    "https://example.com/checkers",
+                ),
+                ("Pick n Pay", "Pick n Pay", "https://example.com/pnp"),
+            ],
+        )
+
+    @patch.dict(
+        "os.environ",
+        {
             "GOOGLE_CALENDAR_ENABLED": "true",
             "GOOGLE_CALENDAR_CREDENTIALS_FILE": "config/google-client.json",
             "GOOGLE_CALENDAR_TOKEN_FILE": "config/google-token.json",

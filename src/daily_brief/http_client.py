@@ -6,11 +6,20 @@ import urllib.request
 from typing import Any
 
 
-USER_AGENT = "daily-brief-agent/0.1 (+https://example.local)"
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0 Safari/537.36 daily-brief-agent/0.1"
+)
+DEFAULT_HEADERS = {
+    "User-Agent": USER_AGENT,
+    "Accept": "*/*",
+    "Accept-Language": "en-ZA,en;q=0.9",
+}
 
 
 def get_text(url: str, timeout_seconds: int = 20) -> str:
-    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    request = urllib.request.Request(url, headers=DEFAULT_HEADERS)
     try:
         with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
             content_type = response.headers.get_content_charset() or "utf-8"
@@ -26,7 +35,7 @@ def get_json(url: str, timeout_seconds: int = 20) -> dict[str, Any]:
 
 
 def get_bytes(url: str, timeout_seconds: int = 20) -> tuple[bytes, str]:
-    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    request = urllib.request.Request(url, headers=DEFAULT_HEADERS)
     try:
         with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
             content_type = response.headers.get("Content-Type", "")

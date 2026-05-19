@@ -4,7 +4,12 @@ import unittest
 from unittest.mock import patch
 
 from daily_brief.config import EmailConfig
-from daily_brief.tools.email import InlineImage, UNDISCLOSED_RECIPIENTS, send_email
+from daily_brief.tools.email import (
+    EmailAttachment,
+    InlineImage,
+    UNDISCLOSED_RECIPIENTS,
+    send_email,
+)
 
 
 class EmailToolTests(unittest.TestCase):
@@ -71,6 +76,36 @@ class EmailToolTests(unittest.TestCase):
         self.assertEqual(image_parts[0].get_content_disposition(), "inline")
         self.assertEqual(image_parts[0].get_filename(), "meal.jpg")
         self.assertEqual(image_parts[0].get_payload(decode=True), b"image-bytes")
+
+    @patch("daily_brief.tools.email.smtplib.SMTP")
+    def test_send_email_can_attach_documents(self, smtp_mock) -> None:
+        smtp = smtp_mock.return_value.__enter__.return_value
+        config = _email_config()
+
+        send_email(
+            config,
+            subject="Grocery specials",
+            text_body="Plain text",
+            html_body="<p>Plain text</p>",
+            attachments=[
+                EmailAttachment(
+                    data=b"%PDF-1.4",
+                    maintype="application",
+                    subtype="pdf",
+                    filename="checkers-specials.pdf",
+                )
+            ],
+        )
+
+        message = smtp.send_message.call_args.args[0]
+        pdf_parts = [
+            part
+            for part in message.walk()
+            if part.get_content_type() == "application/pdf"
+        ]
+        self.assertEqual(len(pdf_parts), 1)
+        self.assertEqual(pdf_parts[0].get_filename(), "checkers-specials.pdf")
+        self.assertEqual(pdf_parts[0].get_payload(decode=True), b"%PDF-1.4")
 
 
 def _email_config() -> EmailConfig:

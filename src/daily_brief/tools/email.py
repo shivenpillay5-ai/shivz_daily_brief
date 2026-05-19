@@ -22,12 +22,21 @@ class InlineImage:
     filename: str
 
 
+@dataclass(frozen=True)
+class EmailAttachment:
+    data: bytes
+    maintype: str
+    subtype: str
+    filename: str
+
+
 def send_email(
     config: EmailConfig,
     subject: str,
     text_body: str,
     html_body: str,
     inline_images: Sequence[InlineImage] | None = None,
+    attachments: Sequence[EmailAttachment] | None = None,
 ) -> None:
     _validate_email_config(config)
 
@@ -38,6 +47,7 @@ def send_email(
     message.set_content(text_body)
     message.add_alternative(html_body, subtype="html")
     _add_inline_images(message, inline_images or [])
+    _add_attachments(message, attachments or [])
 
     with smtplib.SMTP(config.smtp_host, config.smtp_port, timeout=30) as smtp:
         if config.smtp_use_tls:
@@ -79,4 +89,17 @@ def _add_inline_images(
             cid=f"<{image.content_id}>",
             filename=image.filename,
             disposition="inline",
+        )
+
+
+def _add_attachments(
+    message: EmailMessage,
+    attachments: Sequence[EmailAttachment],
+) -> None:
+    for attachment in attachments:
+        message.add_attachment(
+            attachment.data,
+            maintype=attachment.maintype,
+            subtype=attachment.subtype,
+            filename=attachment.filename,
         )
