@@ -80,7 +80,8 @@ class GrocerySpecialsTests(unittest.TestCase):
 
     @patch("daily_brief.tools.grocery_specials.get_text")
     def test_my_catalogue_product_table_is_extracted(self, get_text_mock) -> None:
-        get_text_mock.return_value = """
+        get_text_mock.side_effect = [
+            """
         <html>
           <body>
             <h2>Products in Checkers specials</h2>
@@ -93,16 +94,45 @@ class GrocerySpecialsTests(unittest.TestCase):
                   </a>
                   <span>11/05 - 20/05/2026</span>
                 </td>
-                <td>1</td><td>canola oil</td><td>B-Well Pure Canola Oil</td><td>R 69.99</td>
+                <td>1</td><td><a href="/products/canola-oil">canola oil</a></td><td>B-Well Pure Canola Oil</td><td>R 69.99</td>
               </tr>
               <tr>
-                <td>cereals</td><td>Kellogg's All Bran Flakes Cereal</td><td>R 54.99</td>
+                <td><a href="/products/cereals">cereals</a></td><td>Kellogg's All Bran Flakes Cereal</td><td>R 54.99</td>
               </tr>
             </table>
             <h2>Latest specials</h2>
           </body>
         </html>
-        """
+        """,
+            """
+        <html>
+          <body>
+            <table>
+              <tr>
+                <td>Checkers</td>
+                <td>B-Well Pure Canola Oil</td>
+                <td><img src="/public/gimg/2/8/5/2/9/1/2/b-well-pure-canola-oil--2852912.jpg" alt="B-Well Pure Canola Oil"></td>
+                <td>R 69.99</td>
+              </tr>
+            </table>
+          </body>
+        </html>
+        """,
+            """
+        <html>
+          <body>
+            <table>
+              <tr>
+                <td>Checkers</td>
+                <td>Kellogg's All Bran Flakes Cereal</td>
+                <td><img src="/public/gimg/2/8/5/0/0/5/9/2850059-1080-1080.jpg" alt="Kellogg's All Bran Flakes Cereal"></td>
+                <td>R 54.99</td>
+              </tr>
+            </table>
+          </body>
+        </html>
+        """,
+        ]
 
         content = build_grocery_specials(
             datetime(2026, 5, 26),
@@ -128,8 +158,9 @@ class GrocerySpecialsTests(unittest.TestCase):
         self.assertEqual(specials[0].category, "Pantry Staples")
         self.assertEqual(
             specials[0].image_url,
-            "https://my-catalogue.co.za/public/gimg/checkers-1080-1080.jpg",
+            "https://my-catalogue.co.za/public/gimg/2/8/5/2/9/1/2/b-well-pure-canola-oil--2852912.jpg",
         )
+        self.assertEqual(specials[1].image_url, "")
         self.assertEqual(
             specials[0].catalogue_url,
             "https://my-catalogue.co.za/checkers-specials/catalogue-1",
@@ -205,7 +236,8 @@ class GrocerySpecialsTests(unittest.TestCase):
             )
             html = render_grocery_html(datetime(2026, 5, 26), content)
             self.assertIn("Where to shop", html)
-            self.assertIn("Best buys first", html)
+            self.assertIn("Top 10 by store", html)
+            self.assertIn("Top 10 at Checkers", html)
             self.assertIn("https://example.com/apple.jpg", html)
             self.assertIn("Was R49.99 | Save R10.00 | 20% off", html)
 

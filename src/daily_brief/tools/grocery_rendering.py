@@ -26,6 +26,7 @@ PDF_BOTTOM = 42
 EMAIL_CARD_LIMIT = 8
 CATEGORY_LIMIT = 5
 PDF_CARD_LIMIT = 32
+STORE_EMAIL_LIMIT = 10
 
 STORE_COLORS = {
     "Woolworths": ("#1f2933", "#eef7f0"),
@@ -56,13 +57,16 @@ def render_grocery_text(
         f"Midrand Grocery Specials - {brief_date:%A, %d %B %Y}",
         f"Area: {content.area}",
         "",
-        "Best buys",
+        "Top specials by store",
     ]
 
-    if top_deals:
-        lines.extend(_special_text_line(special) for special in top_deals)
-    else:
-        lines.append("No specials could be extracted cleanly.")
+    for store in content.stores:
+        lines.extend(["", store.store_name, "-" * len(store.store_name)])
+        ranked = _top_store_specials(store, STORE_EMAIL_LIMIT)
+        if ranked:
+            lines.extend(_special_text_line(special) for special in ranked)
+        else:
+            lines.append("No specials could be extracted cleanly.")
 
     lines.extend(["", "Store readout"])
     for store in content.stores:
@@ -91,10 +95,15 @@ def render_grocery_html(
     brief_date: datetime,
     content: GrocerySpecialsContent,
 ) -> str:
-    top_deals = _top_specials(content, EMAIL_CARD_LIMIT)
+    store_sections = "\n".join(_store_top_section_html(store) for store in content.stores)
+    store_top_deals = [
+        special
+        for store in content.stores
+        for special in _top_store_specials(store, STORE_EMAIL_LIMIT)
+    ]
     category_sections = "\n".join(
         _category_section_html(category, specials[:4])
-        for category, specials in _category_groups(top_deals or _all_specials(content)).items()
+        for category, specials in _category_groups(store_top_deals or _all_specials(content)).items()
         if specials
     )
     return f"""<!doctype html>
@@ -124,8 +133,8 @@ def render_grocery_html(
               <td style="padding:24px 34px 30px">
                 {_stats_html(content)}
                 {_store_cards_html(content)}
-                {_section_heading_html("Best buys first", "Start here before opening the full attachments.")}
-                {_deal_grid_html(top_deals)}
+                {_section_heading_html("Top 10 by store", "Each retailer gets its own shortlist, so Woolworths does not drown out the other shops.")}
+                {store_sections}
                 {_section_heading_html("Shop by household need", "Grouped so planning the basket is easier.")}
                 {category_sections}
                 {_warnings_html(content.warnings)}
@@ -240,19 +249,51 @@ def _deal_grid_html(specials: list[GrocerySpecial]) -> str:
     </table>"""
 
 
+def _store_top_section_html(store: GroceryStoreSpecials) -> str:
+    color, tint = STORE_COLORS.get(store.store_name, ("#183b35", "#eef7f0"))
+    ranked = _top_store_specials(store, STORE_EMAIL_LIMIT)
+    if not ranked:
+        return f"""
+        <div style="margin:0 0 18px;padding:14px;background:#ffffff;border:1px solid #e4dccf;border-radius:12px">
+          <h3 style="margin:0;color:{color};font-size:18px">{html.escape(store.store_name)}</h3>
+          <p style="margin:6px 0 0;color:#687782;font-size:13px">No specials could be extracted cleanly.</p>
+        </div>"""
+
+    return f"""
+    <div style="margin:0 0 22px;border:1px solid #e4dccf;border-radius:14px;overflow:hidden;background:#ffffff">
+      <div style="background:{tint};padding:13px 15px;border-left:6px solid {color}">
+        <h3 style="margin:0;color:{color};font-size:19px;line-height:1.2">Top 10 at {html.escape(store.store_name)}</h3>
+        <p style="margin:5px 0 0;color:#4b5563;font-size:12px;line-height:1.35">
+          Strongest picks by household usefulness, savings where available, and basket category.
+        </p>
+      </div>
+      <div style="padding:13px 0 1px 13px">
+        {_deal_grid_html(ranked)}
+      </div>
+    </div>"""
+
+
 def _deal_card_html(special: GrocerySpecial) -> str:
     color, tint = STORE_COLORS.get(special.store_name, ("#183b35", "#eef7f0"))
     category_color = CATEGORY_COLORS.get(special.category, CATEGORY_COLORS["Other"])
     image_html = _email_image_html(special)
     savings = _savings_html(special)
     meta = _special_meta(special)
+    link = _best_link(special)
+    linked_title = html.escape(special.item_name)
+    if link:
+        linked_title = (
+            f'<a href="{html.escape(link, quote=True)}" '
+            f'style="color:#1f2933;text-decoration:none">{linked_title}</a>'
+        )
+    action = _action_link_html(link)
     return f"""
     <td width="50%" valign="top" style="padding:0 8px 12px 0">
       <div style="background:#ffffff;border:1px solid #e4dccf;border-radius:12px;overflow:hidden">
         <div style="padding:12px">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
             <tr>
-              <td width="104" valign="top">{image_html}</td>
+              <td width="104" valign="top">{_linked_image_html(image_html, link)}</td>
               <td valign="top" style="padding-left:12px">
                 <div style="display:inline-block;background:{tint};color:{color};border-radius:999px;padding:4px 8px;font-size:10px;font-weight:900;text-transform:uppercase">
                   {html.escape(special.store_name)}
@@ -260,10 +301,11 @@ def _deal_card_html(special: GrocerySpecial) -> str:
                 <div style="display:inline-block;background:#f3f4f6;color:{category_color};border-radius:999px;padding:4px 8px;font-size:10px;font-weight:900;text-transform:uppercase;margin-left:4px">
                   {html.escape(special.category or "Other")}
                 </div>
-                <h3 style="font-size:15px;line-height:1.25;margin:9px 0 8px;color:#1f2933">{html.escape(special.item_name)}</h3>
+                <h3 style="font-size:15px;line-height:1.25;margin:9px 0 8px;color:#1f2933">{linked_title}</h3>
                 <div style="font-size:23px;font-weight:900;color:{color};line-height:1">{html.escape(special.price)}</div>
                 {savings}
                 <p style="font-size:11px;line-height:1.35;margin:8px 0 0;color:#69746f">{html.escape(meta)}</p>
+                {action}
               </td>
             </tr>
           </table>
@@ -287,6 +329,26 @@ def _email_image_html(special: GrocerySpecial) -> str:
     </div>"""
 
 
+def _linked_image_html(image_html: str, link: str) -> str:
+    if not link:
+        return image_html
+    return (
+        f'<a href="{html.escape(link, quote=True)}" '
+        f'style="text-decoration:none">{image_html}</a>'
+    )
+
+
+def _action_link_html(link: str) -> str:
+    if not link:
+        return ""
+    return f"""
+    <div style="margin-top:9px">
+      <a href="{html.escape(link, quote=True)}" style="display:inline-block;background:#183b35;color:#ffffff;text-decoration:none;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800">
+        View item
+      </a>
+    </div>"""
+
+
 def _savings_html(special: GrocerySpecial) -> str:
     parts = []
     if special.regular_price:
@@ -297,6 +359,8 @@ def _savings_html(special: GrocerySpecial) -> str:
         parts.append(f"{special.saving_percent:.0f}% off")
     if special.unit_price:
         parts.append(special.unit_price)
+    if not parts and special.store_name in {"Checkers", "Pick n Pay"}:
+        parts.append("Was price not published by source")
     if not parts:
         return ""
     return f"""
@@ -319,9 +383,16 @@ def _category_section_html(category: str, specials: list[GrocerySpecial]) -> str
 
 
 def _compact_special_row_html(special: GrocerySpecial) -> str:
+    link = _best_link(special)
+    item = html.escape(special.item_name)
+    if link:
+        item = (
+            f'<a href="{html.escape(link, quote=True)}" '
+            f'style="color:#1f2933;text-decoration:none">{item}</a>'
+        )
     return f"""
     <tr>
-      <td style="padding:9px 12px;border-top:1px solid #eee5d8;font-size:13px;line-height:1.35">{html.escape(special.item_name)}</td>
+      <td style="padding:9px 12px;border-top:1px solid #eee5d8;font-size:13px;line-height:1.35">{item}</td>
       <td style="padding:9px 12px;border-top:1px solid #eee5d8;font-size:12px;color:#6b7280">{html.escape(special.store_name)}</td>
       <td align="right" style="padding:9px 12px;border-top:1px solid #eee5d8;font-size:14px;font-weight:900;color:#183b35;white-space:nowrap">{html.escape(special.price)}</td>
     </tr>"""
@@ -549,6 +620,21 @@ def _top_specials(
     )[:limit]
 
 
+def _top_store_specials(
+    store: GroceryStoreSpecials,
+    limit: int,
+) -> list[GrocerySpecial]:
+    return sorted(
+        store.specials,
+        key=lambda special: (
+            special.deal_score,
+            special.saving_percent or 0,
+            _price_amount(special.price) or 0,
+        ),
+        reverse=True,
+    )[:limit]
+
+
 def _category_groups(
     specials: list[GrocerySpecial],
 ) -> dict[str, list[GrocerySpecial]]:
@@ -604,6 +690,10 @@ def _savings_text(special: GrocerySpecial) -> str:
     if special.unit_price:
         parts.append(special.unit_price)
     return " | ".join(parts)
+
+
+def _best_link(special: GrocerySpecial) -> str:
+    return special.product_url or special.catalogue_url or special.source_url
 
 
 def _price_amount(value: str) -> float | None:

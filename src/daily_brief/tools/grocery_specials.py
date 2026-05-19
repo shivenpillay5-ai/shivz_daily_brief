@@ -337,6 +337,7 @@ def build_grocery_specials(
         store_specials: list[GrocerySpecial] = []
         store_warnings: list[str] = []
         source_urls: list[str] = []
+        image_cache: dict[str, str] = {}
 
         for source in sources:
             source_urls.append(source.url)
@@ -356,6 +357,7 @@ def build_grocery_specials(
             store_specials.extend(parsed)
 
         store_specials = _dedupe_specials(store_specials)
+        store_specials = _enrich_store_product_images(store_specials, image_cache)
         if len(store_specials) > config.max_items_per_store:
             store_warnings.append(
                 "Only the first "
@@ -464,7 +466,7 @@ def _parse_my_catalogue_specials(
         if not cells:
             continue
 
-        data_cells: list[str] = []
+        data_cells: list[tuple[str, str]] = []
         for attrs, cell_html in cells:
             attrs_lower = attrs.lower()
             if "image-cell" in attrs_lower:
@@ -482,14 +484,15 @@ def _parse_my_catalogue_specials(
             if DATE_RANGE_PATTERN.fullmatch(text):
                 current_validity = text
             elif text:
-                data_cells.append(text)
+                data_cells.append((text, _extract_first_attr(cell_html, "a", "href")))
 
         if len(data_cells) < 3:
             continue
-        if not PRICE_PATTERN.fullmatch(data_cells[-1]):
+        if not PRICE_PATTERN.fullmatch(data_cells[-1][0]):
             continue
-        item_name = _clean_item_name(data_cells[-2])
-        product_group = _clean_text(data_cells[-3])
+        item_name = _clean_item_name(data_cells[-2][0])
+        product_group = _clean_text(data_cells[-3][0])
+        product_url = urljoin(source.url, data_cells[-3][1]) if data_cells[-3][1] else ""
         if not _looks_like_item_name(item_name):
             continue
 
@@ -497,12 +500,12 @@ def _parse_my_catalogue_specials(
             GrocerySpecial(
                 store_name=source.store_name,
                 item_name=item_name,
-                price=_normalize_price(data_cells[-1]),
+                price=_normalize_price(data_cells[-1][0]),
                 validity=current_validity,
                 source_name=source.source_name,
                 source_url=source.url,
                 category=_classify_category(item_name, product_group),
-                image_url=current_image_url,
+                product_url=product_url,
                 catalogue_url=current_catalogue_url,
             )
         )
@@ -542,6 +545,7 @@ def _parse_woolworths_specials(
                 source_url=source.url,
                 category=category,
                 image_url=str(attrs.get("p_externalImageReference", "")),
+                product_url=detail_url,
                 catalogue_url=detail_url,
                 regular_price=regular_price,
                 saving_amount=saving_amount,
@@ -722,6 +726,7 @@ def _enrich_special(special: GrocerySpecial) -> GrocerySpecial:
         source_url=special.source_url,
         category=category,
         image_url=special.image_url,
+        product_url=special.product_url,
         catalogue_url=special.catalogue_url,
         regular_price=special.regular_price,
         saving_amount=special.saving_amount,
@@ -762,6 +767,107 @@ def _deal_score(
     return score
 
 
+def _enrich_store_product_images(
+    specials: list[GrocerySpecial],
+    image_cache: dict[str, str],
+) -> list[GrocerySpecial]:
+    ranked_for_images = {
+        id(special)
+        for special in sorted(
+            specials,
+            key=lambda item: item.deal_score,
+            reverse=True,
+        )[:32]
+        if special.product_url and MY_CATALOGUE_HOST in urlparse(special.product_url).netloc
+    }
+
+    enriched: list[GrocerySpecial] = []
+    for special in specials:
+        if id(special) not in ranked_for_images:
+            enriched.append(special)
+            continue
+        image_url = _my_catalogue_product_image(special, image_cache)
+        if not image_url:
+            enriched.append(special)
+            continue
+        enriched.append(
+            GrocerySpecial(
+                store_name=special.store_name,
+                item_name=special.item_name,
+                price=special.price,
+                promotion=special.promotion,
+                validity=special.validity,
+                source_name=special.source_name,
+                source_url=special.source_url,
+                category=special.category,
+                image_url=image_url,
+                product_url=special.product_url,
+                catalogue_url=special.catalogue_url,
+                regular_price=special.regular_price,
+                saving_amount=special.saving_amount,
+                saving_percent=special.saving_percent,
+                unit_price=special.unit_price,
+                deal_score=special.deal_score,
+            )
+        )
+    return enriched
+
+
+def _my_catalogue_product_image(
+    special: GrocerySpecial,
+    image_cache: dict[str, str],
+) -> str:
+    cache_key = f"{special.store_name}|{special.product_url}|{special.item_name}|{special.price}"
+    if cache_key in image_cache:
+        return image_cache[cache_key]
+
+    try:
+        page_html = get_text(special.product_url, timeout_seconds=12)
+    except RuntimeError:
+        image_cache[cache_key] = ""
+        return ""
+
+    image_url = _extract_product_image_from_my_catalogue_page(page_html, special)
+    image_cache[cache_key] = image_url
+    return image_url
+
+
+def _extract_product_image_from_my_catalogue_page(
+    page_html: str,
+    special: GrocerySpecial,
+) -> str:
+    expected_store = _normalize_lookup_text(special.store_name).replace("hypermarket", "")
+    expected_item = _normalize_lookup_text(special.item_name)
+    expected_price = _normalize_price(special.price)
+
+    for row_html in re.findall(r"<tr\b[^>]*>(.*?)</tr>", page_html, re.IGNORECASE | re.DOTALL):
+        row_text = _normalize_lookup_text(_strip_html(row_html))
+        if expected_store not in row_text:
+            continue
+        if expected_item not in row_text:
+            continue
+        if expected_price and _normalize_price(_clean_text(_strip_html(row_html))) and expected_price not in _normalize_price(_clean_text(_strip_html(row_html))):
+            continue
+
+        for img_html in re.findall(r"<img\b[^>]*>", row_html, re.IGNORECASE | re.DOTALL):
+            alt = _clean_text(_extract_attr_from_tag(img_html, "alt"))
+            src = _extract_attr_from_tag(img_html, "src")
+            lowered_alt = alt.lower()
+            if not src or "logo" in lowered_alt or "close" in lowered_alt:
+                continue
+            if not _looks_like_product_image_src(src):
+                continue
+            if alt and _normalize_lookup_text(alt) not in row_text:
+                continue
+            return _catalogue_image_url(urljoin(special.product_url, src))
+
+    return ""
+
+
+def _normalize_lookup_text(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", unescape(value).lower()).strip()
+
+
 def _strip_html(value: str) -> str:
     return re.sub(r"<[^>]+>", " ", value)
 
@@ -772,6 +878,12 @@ def _extract_first_attr(value: str, tag_name: str, attr_name: str) -> str:
         rf"(?P<quote>['\"])(?P<value>.*?)(?P=quote)"
     )
     match = re.search(pattern, value, re.IGNORECASE | re.DOTALL)
+    return unescape(match.group("value")) if match else ""
+
+
+def _extract_attr_from_tag(tag_html: str, attr_name: str) -> str:
+    pattern = rf"\b{attr_name}=(?P<quote>['\"])(?P<value>.*?)(?P=quote)"
+    match = re.search(pattern, tag_html, re.IGNORECASE | re.DOTALL)
     return unescape(match.group("value")) if match else ""
 
 
@@ -790,6 +902,12 @@ def _catalogue_image_url(value: str) -> str:
     if not value:
         return ""
     return re.sub(r"-\d+-\d+(\.[A-Za-z0-9]+)$", r"-1080-1080\1", value)
+
+
+def _looks_like_product_image_src(value: str) -> bool:
+    filename = urlparse(value).path.rsplit("/", 1)[-1]
+    stem = filename.rsplit(".", 1)[0]
+    return bool(re.search(r"[A-Za-z]", stem))
 
 
 def _format_rand(value: float) -> str:

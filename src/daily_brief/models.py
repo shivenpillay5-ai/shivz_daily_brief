@@ -143,6 +143,7 @@ class GrocerySpecial:
     source_url: str = ""
     category: str = ""
     image_url: str = ""
+    product_url: str = ""
     catalogue_url: str = ""
     regular_price: str = ""
     saving_amount: str = ""
