@@ -207,7 +207,12 @@ daily-brief --grocery-specials --send
 ```
 
 The grocery pack reads `GROCERY_SPECIALS_SOURCES`, groups results by store, and
-writes PDFs into `GROCERY_SPECIALS_OUTPUT_DIR`. If `GROCERY_SPECIALS_EMAIL`
+writes visual PDFs into `GROCERY_SPECIALS_OUTPUT_DIR`. The email highlights
+where to shop, best buys, and category picks. Attachments include one combined
+month-end shopping pack plus store-specific guides. Where the source exposes
+the data, cards show product images, regular price, saving amount, saving
+percentage, and unit price. Checkers and Pick n Pay currently use catalogue-page
+imagery; Woolworths exposes product-level images. If `GROCERY_SPECIALS_EMAIL`
 is empty, sending falls back to `COUPLE_EMAIL_TO`, then `EMAIL_TO`.
 
 ## Google Calendar Setup For The Couple Brief

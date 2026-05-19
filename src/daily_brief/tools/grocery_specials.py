@@ -2,12 +2,13 @@ from __future__ import annotations
 
 """Scrape grocery specials from configured retailer and catalogue pages."""
 
+import json
 import re
 from collections import defaultdict
 from datetime import datetime
 from html import unescape
 from html.parser import HTMLParser
-from urllib.parse import urlparse
+from urllib.parse import unquote, urljoin, urlparse
 
 from daily_brief.config import GrocerySourceConfig, GrocerySpecialsConfig
 from daily_brief.http_client import get_text
@@ -18,6 +19,7 @@ from daily_brief.models import (
 )
 
 
+RAND_PATTERN = re.compile(r"R\s*([\d\s]+(?:[,.]\d{2})?)", re.IGNORECASE)
 PRICE_PATTERN = re.compile(
     r"(?:ANY\s+)?\d+\s+FOR\s+(?<![A-Za-z])R\s*\d[\d\s]*(?:[,.]\d{2})?"
     r"|SAVE\s+(?<![A-Za-z])R\s*\d[\d\s]*(?:[,.]\d{2})?"
@@ -175,6 +177,152 @@ MY_CATALOGUE_HEADER_LINES = {
     "description",
     "price",
 }
+WOOLWORTHS_HOST = "woolworths.co.za"
+CATEGORY_RULES = (
+    (
+        "Meat & Protein",
+        (
+            "bacon",
+            "beef",
+            "chicken",
+            "egg",
+            "fish",
+            "mince",
+            "mussel",
+            "pork",
+            "protein",
+            "steak",
+            "t-bone",
+        ),
+    ),
+    (
+        "Fresh Produce",
+        (
+            "apple",
+            "avocado",
+            "banana",
+            "blueberr",
+            "cabbage",
+            "carrot",
+            "citrus",
+            "clemengold",
+            "cucumber",
+            "fruit",
+            "grape",
+            "lettuce",
+            "mandarin",
+            "orange",
+            "pepper",
+            "potato",
+            "salad",
+            "sweetcorn",
+            "tomato",
+            "vegetable",
+        ),
+    ),
+    (
+        "Pantry Staples",
+        (
+            "bran",
+            "canola",
+            "cereal",
+            "coffee",
+            "corn flakes",
+            "flour",
+            "maize",
+            "oil",
+            "pasta",
+            "rice",
+            "sugar",
+        ),
+    ),
+    (
+        "Bakery",
+        (
+            "bakery",
+            "bread",
+            "bun",
+            "cupcake",
+            "roll",
+            "sourdough",
+        ),
+    ),
+    (
+        "Dairy & Eggs",
+        (
+            "butter",
+            "cheddar",
+            "cheese",
+            "cream",
+            "custard",
+            "dairy",
+            "gouda",
+            "milk",
+            "mozzarella",
+            "ricotta",
+            "yoghurt",
+        ),
+    ),
+    (
+        "Cleaning & Household",
+        (
+            "battery",
+            "clean",
+            "detergent",
+            "dishwash",
+            "laundry",
+            "omo",
+            "toilet",
+            "washing powder",
+        ),
+    ),
+    (
+        "Baby & Pets",
+        (
+            "baby",
+            "cat",
+            "dog",
+            "husky",
+            "johnson",
+            "pet",
+            "whiskas",
+        ),
+    ),
+    (
+        "Drinks",
+        (
+            "beer",
+            "coca",
+            "cold drink",
+            "drink",
+            "gin",
+            "juice",
+            "water",
+            "wine",
+        ),
+    ),
+    (
+        "Home & General",
+        (
+            "ladder",
+            "microwave",
+            "oven",
+        ),
+    ),
+)
+CATEGORY_WEIGHTS = {
+    "Meat & Protein": 42,
+    "Pantry Staples": 38,
+    "Fresh Produce": 35,
+    "Cleaning & Household": 34,
+    "Dairy & Eggs": 32,
+    "Baby & Pets": 28,
+    "Bakery": 24,
+    "Drinks": 18,
+    "Home & General": 8,
+    "Treats & Snacks": 12,
+    "Other": 5,
+}
 
 
 def build_grocery_specials(
@@ -252,8 +400,13 @@ def _parse_source_specials(
     specials: list[GrocerySpecial] = []
     host = urlparse(source.url).netloc
 
+    if WOOLWORTHS_HOST in host:
+        specials.extend(_parse_woolworths_specials(source, page_html))
+        if specials:
+            return _dedupe_specials(specials)
+
     if MY_CATALOGUE_HOST in host:
-        specials.extend(_parse_my_catalogue_specials(source, lines))
+        specials.extend(_parse_my_catalogue_specials(source, page_html))
         if specials:
             return _dedupe_specials(specials)
 
@@ -278,13 +431,15 @@ def _parse_catalogue_specials(
                 continue
 
             specials.append(
-                GrocerySpecial(
+                _enrich_special(
+                    GrocerySpecial(
                     store_name=source.store_name,
                     item_name=item_name,
                     price=price,
                     validity=validity,
                     source_name=source.source_name,
                     source_url=source.url,
+                    )
                 )
             )
 
@@ -293,65 +448,110 @@ def _parse_catalogue_specials(
 
 def _parse_my_catalogue_specials(
     source: GrocerySourceConfig,
-    lines: list[str],
+    page_html: str,
 ) -> list[GrocerySpecial]:
+    table_html = _monitoring_table_html(page_html)
+    if not table_html:
+        return []
+
     specials: list[GrocerySpecial] = []
-    in_table = False
-    validity = ""
+    current_image_url = ""
+    current_validity = ""
+    current_catalogue_url = source.url
 
-    for index, line in enumerate(lines):
-        lowered = line.lower()
-        if lowered.startswith("products in ") and " specials" in lowered:
-            in_table = True
-            continue
-
-        if not in_table:
-            continue
-        if lowered in MY_CATALOGUE_STOP_LINES:
-            break
-        if lowered in MY_CATALOGUE_HEADER_LINES:
-            continue
-        if DATE_RANGE_PATTERN.fullmatch(line):
-            validity = line
-            continue
-        if not PRICE_PATTERN.fullmatch(line):
+    for row_html in re.findall(r"<tr\b[^>]*>(.*?)</tr>", table_html, re.IGNORECASE | re.DOTALL):
+        cells = re.findall(r"<td\b([^>]*)>(.*?)</td>", row_html, re.IGNORECASE | re.DOTALL)
+        if not cells:
             continue
 
-        item_name = _previous_my_catalogue_item(lines, index)
+        data_cells: list[str] = []
+        for attrs, cell_html in cells:
+            attrs_lower = attrs.lower()
+            if "image-cell" in attrs_lower:
+                image_url = _extract_first_attr(cell_html, "img", "src")
+                href = _extract_first_attr(cell_html, "a", "href")
+                validity = _first_tag_text(cell_html, "span")
+                current_image_url = _catalogue_image_url(
+                    urljoin(source.url, image_url)
+                )
+                current_catalogue_url = urljoin(source.url, href) if href else source.url
+                current_validity = validity or current_validity
+                continue
+
+            text = _clean_text(_strip_html(cell_html))
+            if DATE_RANGE_PATTERN.fullmatch(text):
+                current_validity = text
+            elif text:
+                data_cells.append(text)
+
+        if len(data_cells) < 3:
+            continue
+        if not PRICE_PATTERN.fullmatch(data_cells[-1]):
+            continue
+        item_name = _clean_item_name(data_cells[-2])
+        product_group = _clean_text(data_cells[-3])
         if not _looks_like_item_name(item_name):
             continue
 
-        specials.append(
+        special = _enrich_special(
             GrocerySpecial(
                 store_name=source.store_name,
                 item_name=item_name,
-                price=_normalize_price(line),
-                validity=validity,
+                price=_normalize_price(data_cells[-1]),
+                validity=current_validity,
                 source_name=source.source_name,
                 source_url=source.url,
+                category=_classify_category(item_name, product_group),
+                image_url=current_image_url,
+                catalogue_url=current_catalogue_url,
             )
         )
+        specials.append(special)
 
     return specials
 
 
-def _previous_my_catalogue_item(lines: list[str], price_index: int) -> str:
-    for candidate_index in range(price_index - 1, max(-1, price_index - 6), -1):
-        candidate = _clean_item_name(lines[candidate_index])
-        lowered = candidate.lower()
-        if not candidate:
+def _parse_woolworths_specials(
+    source: GrocerySourceConfig,
+    page_html: str,
+) -> list[GrocerySpecial]:
+    specials: list[GrocerySpecial] = []
+    for record in _extract_woolworths_records(page_html):
+        attrs = record.get("attributes", {})
+        item_name = _clean_item_name(str(attrs.get("p_displayName", "")))
+        if not _looks_like_item_name(item_name):
             continue
-        if lowered in MY_CATALOGUE_HEADER_LINES:
+
+        price_info = _woolworths_price_info(record.get("startingPrice", {}))
+        if not price_info:
             continue
-        if DATE_RANGE_PATTERN.fullmatch(candidate):
-            continue
-        if re.fullmatch(r"\d+", candidate):
-            continue
-        if PRICE_PATTERN.fullmatch(candidate):
-            continue
-        if _looks_like_item_name(candidate):
-            return candidate
-    return ""
+
+        price, regular_price, saving_amount, saving_percent, unit_price = price_info
+        detail_url = urljoin(source.url, str(attrs.get("detailPageURL", "")))
+        category = _classify_category(
+            item_name,
+            str(attrs.get("p_defaultCategoryName", "")),
+        )
+        special = _enrich_special(
+            GrocerySpecial(
+                store_name=source.store_name,
+                item_name=item_name,
+                price=price,
+                promotion=_promotion_from_detail_url(detail_url),
+                source_name=source.source_name,
+                source_url=source.url,
+                category=category,
+                image_url=str(attrs.get("p_externalImageReference", "")),
+                catalogue_url=detail_url,
+                regular_price=regular_price,
+                saving_amount=saving_amount,
+                saving_percent=saving_percent,
+                unit_price=unit_price,
+            )
+        )
+        specials.append(special)
+
+    return specials
 
 
 def _parse_generic_price_lines(
@@ -381,17 +581,230 @@ def _parse_generic_price_lines(
             promotion = _promotion_from_price_line(line, price)
 
         specials.append(
-            GrocerySpecial(
+            _enrich_special(
+                GrocerySpecial(
                 store_name=source.store_name,
                 item_name=item_name,
                 price=price,
                 promotion=promotion,
                 source_name=source.source_name,
                 source_url=source.url,
+                )
             )
         )
 
     return specials
+
+
+def _monitoring_table_html(page_html: str) -> str:
+    start = page_html.find('<table class="table monitoring-products-table">')
+    if start == -1:
+        return ""
+    end = page_html.find("</table>", start)
+    if end == -1:
+        return ""
+    return page_html[start : end + len("</table>")]
+
+
+def _extract_woolworths_records(page_html: str) -> list[dict]:
+    all_records: list[dict] = []
+    search_from = 0
+    while True:
+        marker_index = page_html.find('"records":', search_from)
+        if marker_index == -1:
+            break
+        array_start = page_html.find("[", marker_index)
+        if array_start == -1:
+            break
+        array_text = _extract_json_array(page_html, array_start)
+        search_from = array_start + max(1, len(array_text))
+        if not array_text:
+            continue
+        try:
+            records = json.loads(array_text)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(records, list):
+            all_records.extend(record for record in records if isinstance(record, dict))
+
+    return all_records
+
+
+def _extract_json_array(text: str, start: int) -> str:
+    depth = 0
+    in_string = False
+    escaped = False
+    for index in range(start, len(text)):
+        char = text[index]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+
+        if char == '"':
+            in_string = True
+        elif char == "[":
+            depth += 1
+        elif char == "]":
+            depth -= 1
+            if depth == 0:
+                return text[start : index + 1]
+
+    return ""
+
+
+def _woolworths_price_info(
+    starting_price: object,
+) -> tuple[str, str, str, float | None, str] | None:
+    if not isinstance(starting_price, dict):
+        return None
+
+    price_values: list[float] = []
+    unit_price = ""
+    for key, value in starting_price.items():
+        if not isinstance(value, (int, float)) or value <= 0:
+            continue
+        if key.endswith("_wp"):
+            continue
+        if "kilogramPrice" in key:
+            unit_price = unit_price or f"{_format_rand(float(value))}/kg"
+            continue
+        price_values.append(float(value))
+
+    if not price_values:
+        return None
+
+    current = min(price_values)
+    regular = max(price_values)
+    saving = regular - current
+    saving_percent = (saving / regular * 100) if saving > 0 and regular > 0 else None
+    return (
+        _format_rand(current),
+        _format_rand(regular) if saving > 0.01 else "",
+        _format_rand(saving) if saving > 0.01 else "",
+        round(saving_percent, 1) if saving_percent is not None else None,
+        unit_price,
+    )
+
+
+def _promotion_from_detail_url(detail_url: str) -> str:
+    parts = [unquote(part) for part in urlparse(detail_url).path.split("/") if part]
+    for index, part in enumerate(parts):
+        normalized = part.replace("-", " ")
+        lowered = normalized.lower()
+        if "save" in lowered or lowered.startswith("buy"):
+            return normalized
+        if part == "Promotions" and index + 1 < len(parts):
+            return parts[index + 1].replace("-", " ")
+    return ""
+
+
+def _enrich_special(special: GrocerySpecial) -> GrocerySpecial:
+    category = special.category or _classify_category(special.item_name, "")
+    score = special.deal_score or _deal_score(
+        item_name=special.item_name,
+        category=category,
+        saving_percent=special.saving_percent,
+        promotion=special.promotion,
+        price=special.price,
+    )
+    return GrocerySpecial(
+        store_name=special.store_name,
+        item_name=special.item_name,
+        price=special.price,
+        promotion=special.promotion,
+        validity=special.validity,
+        source_name=special.source_name,
+        source_url=special.source_url,
+        category=category,
+        image_url=special.image_url,
+        catalogue_url=special.catalogue_url,
+        regular_price=special.regular_price,
+        saving_amount=special.saving_amount,
+        saving_percent=special.saving_percent,
+        unit_price=special.unit_price,
+        deal_score=score,
+    )
+
+
+def _classify_category(item_name: str, source_category: str) -> str:
+    haystack = f"{item_name} {source_category}".lower()
+    for category, keywords in CATEGORY_RULES:
+        if any(keyword in haystack for keyword in keywords):
+            return category
+    if any(word in haystack for word in ("chocolate", "snack", "sweet", "biscuit")):
+        return "Treats & Snacks"
+    return "Other"
+
+
+def _deal_score(
+    item_name: str,
+    category: str,
+    saving_percent: float | None,
+    promotion: str,
+    price: str,
+) -> int:
+    lowered = f"{item_name} {promotion}".lower()
+    score = CATEGORY_WEIGHTS.get(category, CATEGORY_WEIGHTS["Other"])
+    if saving_percent is not None:
+        score += min(45, int(saving_percent * 1.8))
+    if any(word in lowered for word in ("bulk", "2kg", "5 l", "5l", "10kg", "30s")):
+        score += 12
+    if any(word in lowered for word in ("buy any", "save", "combo", "assorted")):
+        score += 8
+    amount = _price_amount(price)
+    if amount is not None and 20 <= amount <= 150:
+        score += 6
+    return score
+
+
+def _strip_html(value: str) -> str:
+    return re.sub(r"<[^>]+>", " ", value)
+
+
+def _extract_first_attr(value: str, tag_name: str, attr_name: str) -> str:
+    pattern = (
+        rf"<{tag_name}\b[^>]*\b{attr_name}="
+        rf"(?P<quote>['\"])(?P<value>.*?)(?P=quote)"
+    )
+    match = re.search(pattern, value, re.IGNORECASE | re.DOTALL)
+    return unescape(match.group("value")) if match else ""
+
+
+def _first_tag_text(value: str, tag_name: str) -> str:
+    match = re.search(
+        rf"<{tag_name}\b[^>]*>(.*?)</{tag_name}>",
+        value,
+        re.IGNORECASE | re.DOTALL,
+    )
+    if not match:
+        return ""
+    return _clean_text(_strip_html(match.group(1)))
+
+
+def _catalogue_image_url(value: str) -> str:
+    if not value:
+        return ""
+    return re.sub(r"-\d+-\d+(\.[A-Za-z0-9]+)$", r"-1080-1080\1", value)
+
+
+def _format_rand(value: float) -> str:
+    return f"R{value:.2f}"
+
+
+def _price_amount(value: str) -> float | None:
+    match = RAND_PATTERN.search(value)
+    if not match:
+        return None
+    normalized = match.group(1).replace(" ", "").replace(",", ".")
+    try:
+        return float(normalized)
+    except ValueError:
+        return None
 
 
 def _choose_item_context(lines: list[str], price_index: int) -> tuple[str, str]:

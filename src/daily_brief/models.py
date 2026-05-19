@@ -141,6 +141,14 @@ class GrocerySpecial:
     validity: str = ""
     source_name: str = ""
     source_url: str = ""
+    category: str = ""
+    image_url: str = ""
+    catalogue_url: str = ""
+    regular_price: str = ""
+    saving_amount: str = ""
+    saving_percent: float | None = None
+    unit_price: str = ""
+    deal_score: int = 0
 
 
 @dataclass(frozen=True)

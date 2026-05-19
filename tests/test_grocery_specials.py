@@ -85,9 +85,20 @@ class GrocerySpecialsTests(unittest.TestCase):
           <body>
             <h2>Products in Checkers specials</h2>
             <div>Catalogue</div><div>Page</div><div>Products</div><div>Description</div><div>Price</div>
-            <div>11/05 - 20/05/2026</div>
-            <a>1</a><a>canola oil</a><div>B-Well Pure Canola Oil</div><div>R 69.99</div>
-            <a>cereals</a><div>Kellogg's All Bran Flakes Cereal</div><div>R 54.99</div>
+            <table class="table monitoring-products-table">
+              <tr>
+                <td class="image-cell" rowspan="2">
+                  <a href="/checkers-specials/catalogue-1">
+                    <img src="/public/gimg/checkers-160-165.jpg">
+                  </a>
+                  <span>11/05 - 20/05/2026</span>
+                </td>
+                <td>1</td><td>canola oil</td><td>B-Well Pure Canola Oil</td><td>R 69.99</td>
+              </tr>
+              <tr>
+                <td>cereals</td><td>Kellogg's All Bran Flakes Cereal</td><td>R 54.99</td>
+              </tr>
+            </table>
             <h2>Latest specials</h2>
           </body>
         </html>
@@ -114,6 +125,60 @@ class GrocerySpecialsTests(unittest.TestCase):
                 ("Kellogg's All Bran Flakes Cereal", "R54.99", "11/05 - 20/05/2026"),
             ],
         )
+        self.assertEqual(specials[0].category, "Pantry Staples")
+        self.assertEqual(
+            specials[0].image_url,
+            "https://my-catalogue.co.za/public/gimg/checkers-1080-1080.jpg",
+        )
+        self.assertEqual(
+            specials[0].catalogue_url,
+            "https://my-catalogue.co.za/checkers-specials/catalogue-1",
+        )
+
+    @patch("daily_brief.tools.grocery_specials.get_text")
+    def test_woolworths_embedded_records_are_enriched(self, get_text_mock) -> None:
+        get_text_mock.return_value = """
+        <html><script>
+        {"records":[
+          {
+            "attributes":{
+              "p_displayName":"Large Carrots 1 kg",
+              "p_defaultCategoryName":"Carrots",
+              "p_externalImageReference":"https://assets.example/carrot.jpg",
+              "detailPageURL":"/prod/Food/Promotions/Buy-2-Or-More-And-Save/Buy-any-2-save-R10/Large-Carrots/_/A-123"
+            },
+            "startingPrice":{
+              "p_pl10":29.99,
+              "p_pl30":19.99,
+              "p_pl30_kilogramPrice":19.99
+            },
+            "priceRangeStatus":{"p_pl30":false}
+          }
+        ]}
+        </script></html>
+        """
+
+        content = build_grocery_specials(
+            datetime(2026, 5, 26),
+            _config(
+                [
+                    GrocerySourceConfig(
+                        store_name="Woolworths",
+                        source_name="Woolworths Food Promotions",
+                        url="https://www.woolworths.co.za/cat/Promotions/Save/Food/_/N-1z13sk5",
+                    )
+                ]
+            ),
+        )
+
+        special = content.stores[0].specials[0]
+        self.assertEqual(special.item_name, "Large Carrots 1 kg")
+        self.assertEqual(special.price, "R19.99")
+        self.assertEqual(special.regular_price, "R29.99")
+        self.assertEqual(special.saving_amount, "R10.00")
+        self.assertEqual(special.saving_percent, 33.3)
+        self.assertEqual(special.category, "Fresh Produce")
+        self.assertEqual(special.image_url, "https://assets.example/carrot.jpg")
 
     def test_rendering_writes_store_pdfs(self) -> None:
         content = GrocerySpecialsContent(
@@ -138,14 +203,24 @@ class GrocerySpecialsTests(unittest.TestCase):
                     )
                 ],
             )
-            paths = write_grocery_store_pdfs(
-                datetime(2026, 5, 26),
-                content,
-                Path(temp_dir),
-            )
+            html = render_grocery_html(datetime(2026, 5, 26), content)
+            self.assertIn("Where to shop", html)
+            self.assertIn("Best buys first", html)
+            self.assertIn("https://example.com/apple.jpg", html)
+            self.assertIn("Was R49.99 | Save R10.00 | 20% off", html)
 
-            self.assertEqual(len(paths), 1)
-            self.assertTrue(paths[0].read_bytes().startswith(b"%PDF-1.4"))
+            with patch(
+                "daily_brief.tools.grocery_rendering.get_bytes",
+                side_effect=RuntimeError("offline"),
+            ):
+                paths = write_grocery_store_pdfs(
+                    datetime(2026, 5, 26),
+                    content,
+                    Path(temp_dir),
+                )
+
+            self.assertEqual(len(paths), 2)
+            self.assertTrue(all(path.read_bytes().startswith(b"%PDF-1.4") for path in paths))
 
 
 def _config(sources: list[GrocerySourceConfig]) -> GrocerySpecialsConfig:
@@ -168,6 +243,12 @@ def _fixture_special():
         price="R39,99",
         source_name="Checkers fixture",
         source_url="https://example.com/checkers",
+        category="Fresh Produce",
+        image_url="https://example.com/apple.jpg",
+        regular_price="R49.99",
+        saving_amount="R10.00",
+        saving_percent=20.0,
+        deal_score=60,
     )
 
 
