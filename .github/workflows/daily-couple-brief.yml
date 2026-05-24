@@ -18,6 +18,10 @@ concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: false
 
+permissions:
+  actions: read
+  contents: read
+
 jobs:
   send-couple-brief:
     runs-on: ubuntu-latest
@@ -73,14 +77,72 @@ jobs:
           path: ${{ steps.send-marker.outputs.path }}
           key: email-sent-${{ steps.send-marker.outputs.slug }}-${{ steps.send-marker.outputs.date }}
 
+      - name: Check successful runs today
+        id: run-history
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MARKER_DATE: ${{ steps.send-marker.outputs.date }}
+          WORKFLOW_FILE: daily-couple-brief.yml
+        run: |
+          url="${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW_FILE}/runs?branch=${GITHUB_REF_NAME}&status=success&per_page=20"
+
+          if ! response="$(curl -fsSL \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "$url")"; then
+            echo "Could not check prior workflow runs; falling back to the cache marker only."
+            echo "prior_success=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          prior_success="$(
+            RUNS_JSON="$response" python3 - "$MARKER_DATE" "$GITHUB_RUN_ID" <<'PY'
+          import json
+          import os
+          import sys
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+
+          target_date = sys.argv[1]
+          current_run_id = sys.argv[2]
+          data = json.loads(os.environ["RUNS_JSON"])
+          timezone = ZoneInfo("Africa/Johannesburg")
+
+          for run in data.get("workflow_runs", []):
+              if str(run.get("id")) == current_run_id:
+                  continue
+              if run.get("conclusion") != "success":
+                  continue
+              created_at = run.get("created_at")
+              if not created_at:
+                  continue
+              created_date = (
+                  datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+                  .astimezone(timezone)
+                  .date()
+                  .isoformat()
+              )
+              if created_date == target_date:
+                  print("true")
+                  break
+          else:
+              print("false")
+          PY
+          )"
+
+          echo "prior_success=${prior_success}" >> "$GITHUB_OUTPUT"
+
       - name: Decide whether to send email
         id: dedupe
         shell: bash
         env:
           CACHE_HIT: ${{ steps.email-marker.outputs.cache-hit }}
+          PRIOR_SUCCESS: ${{ steps.run-history.outputs.prior_success }}
           FORCE_SEND: ${{ github.event_name == 'workflow_dispatch' && inputs.force_send }}
         run: |
-          if [ "$CACHE_HIT" = "true" ] && [ "$FORCE_SEND" != "true" ]; then
+          if { [ "$CACHE_HIT" = "true" ] || [ "$PRIOR_SUCCESS" = "true" ]; } && [ "$FORCE_SEND" != "true" ]; then
             echo "Email for ${{ steps.send-marker.outputs.date }} was already sent; skipping duplicate run."
             echo "should_send=false" >> "$GITHUB_OUTPUT"
           else
@@ -168,6 +230,7 @@ jobs:
 
       - name: Save email sent marker
         if: success() && steps.dedupe.outputs.should_send == 'true' && steps.email-marker.outputs.cache-hit != 'true'
+        continue-on-error: true
         uses: actions/cache/save@v4
         with:
           path: ${{ steps.send-marker.outputs.path }}

@@ -336,10 +336,11 @@ team-shinola-brief   10:17 Africa/Johannesburg
 grocery-specials     Monthly on the 26th at 19:17 Africa/Johannesburg
 ```
 
-Each workflow writes a GitHub Actions cache marker after its email is sent.
-If another run for the same workflow starts on the same Africa/Johannesburg
-date, it skips the duplicate email. Workflow concurrency also keeps same-email
-runs in order so overlapping cron and fallback runs do not race each other.
+Each workflow checks for a same-day successful run and writes a GitHub Actions
+cache marker after its email is sent. If another run for the same workflow
+starts on the same Africa/Johannesburg date, it skips the duplicate email.
+Workflow concurrency also keeps same-email runs in order so overlapping cron
+and fallback runs do not race each other.
 Manual workflow runs include a `force_send` input for intentionally sending
 again.
 
