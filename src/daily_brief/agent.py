@@ -103,6 +103,12 @@ class DailyBriefAgent:
             print("Fetching market pulse...")
             market_pulse = fetch_market_pulse()
 
+        print("Fetching South Africa news feeds...")
+        south_africa_items, south_africa_warnings = fetch_feed_items(
+            self.config.south_africa_feeds,
+            category="south_africa",
+        )
+
         print("Fetching world news feeds...")
         world_items, world_warnings = fetch_feed_items(
             self.config.news_feeds,
@@ -113,6 +119,15 @@ class DailyBriefAgent:
         ai_tech_items, ai_tech_warnings = fetch_feed_items(
             self.config.ai_tech_feeds,
             category="ai_tech",
+        )
+
+        print("Ranking South Africa stories...")
+        south_africa_ranked = rank_items(
+            south_africa_items,
+            category_name="South Africa news",
+            top_n=self.config.top_n,
+            config=self.config,
+            use_openai=use_openai,
         )
 
         print("Ranking world stories...")
@@ -134,6 +149,7 @@ class DailyBriefAgent:
         )
 
         print("Enriching story summaries...")
+        south_africa_ranked = enrich_story_summaries(south_africa_ranked)
         world_ranked = enrich_story_summaries(world_ranked)
         ai_tech_ranked = enrich_story_summaries(ai_tech_ranked)
 
@@ -146,9 +162,10 @@ class DailyBriefAgent:
             ai_tech_items=ai_tech_ranked,
             config=self.config,
             use_openai=use_openai,
+            south_africa_items=south_africa_ranked,
         )
 
-        warnings = world_warnings + ai_tech_warnings
+        warnings = south_africa_warnings + world_warnings + ai_tech_warnings
         if market_pulse:
             warnings += market_pulse.warnings
         text_body = render_text(
@@ -156,6 +173,7 @@ class DailyBriefAgent:
             weather_reports=weather_reports,
             morning_summary=morning_summary,
             market_pulse=market_pulse,
+            south_africa_items=south_africa_ranked,
             world_items=world_ranked,
             ai_tech_items=ai_tech_ranked,
             warnings=warnings,
@@ -165,6 +183,7 @@ class DailyBriefAgent:
             weather_reports=weather_reports,
             morning_summary=morning_summary,
             market_pulse=market_pulse,
+            south_africa_items=south_africa_ranked,
             world_items=world_ranked,
             ai_tech_items=ai_tech_ranked,
             warnings=warnings,
@@ -174,6 +193,7 @@ class DailyBriefAgent:
             weather_reports=weather_reports,
             morning_summary=morning_summary,
             market_pulse=market_pulse,
+            south_africa_items=south_africa_ranked,
             world_items=world_ranked,
             ai_tech_items=ai_tech_ranked,
         )

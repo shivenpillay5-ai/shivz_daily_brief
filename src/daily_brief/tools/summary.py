@@ -147,6 +147,7 @@ def write_morning_summary(
     ai_tech_items: list[RankedItem],
     config: AppConfig,
     use_openai: bool = True,
+    south_africa_items: list[RankedItem] | None = None,
 ) -> MorningSummary:
     facts = _build_summary_facts(
         brief_date=brief_date,
@@ -154,6 +155,7 @@ def write_morning_summary(
         market_pulse=market_pulse,
         world_items=world_items,
         ai_tech_items=ai_tech_items,
+        south_africa_items=south_africa_items or [],
     )
 
     if use_openai and config.openai_api_key:
@@ -223,6 +225,7 @@ def _build_summary_facts(
     market_pulse: MarketPulse | None,
     world_items: list[RankedItem],
     ai_tech_items: list[RankedItem],
+    south_africa_items: list[RankedItem],
 ) -> dict[str, object]:
     return {
         "date": brief_date.strftime("%A, %d %B %Y"),
@@ -249,6 +252,7 @@ def _build_summary_facts(
             }
             for quote in (market_pulse.quotes if market_pulse else [])
         ],
+        "south_africa_news": [_story_fact(item) for item in south_africa_items[:3]],
         "world_news": [_story_fact(item) for item in world_items[:3]],
         "ai_tech_news": [_story_fact(item) for item in ai_tech_items[:3]],
     }

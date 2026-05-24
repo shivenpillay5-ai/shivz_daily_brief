@@ -9,7 +9,7 @@ Rules:
 - Keep the tone warm, sharp, and lightly witty.
 - Do not sound like marketing copy.
 - Do not repeat the exact values, prices, temperatures, or headlines that appear below.
-- Tease the shape of the day across weather, markets, world news, and AI/tech without giving everything away.
+- Tease the shape of the day across weather, markets, South African news, world news, and AI/tech without giving everything away.
 - Use the supplied opener_style as a tone cue only; do not mention it literally.
 - The body should feel like an editor setting the scene, not a summary table.
 - Return an empty bullets array; the email layout does not show bullet cards.

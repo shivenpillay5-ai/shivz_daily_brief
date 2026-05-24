@@ -21,6 +21,11 @@ DEFAULT_AI_TECH_FEEDS = (
     "MIT Technology Review AI|https://www.technologyreview.com/topic/artificial-intelligence/feed/"
 )
 
+DEFAULT_SOUTH_AFRICA_FEEDS = (
+    "BusinessTech|https://businesstech.co.za/news/feed/;"
+    "News24 South Africa|https://feeds.news24.com/articles/news24/SouthAfrica/rss"
+)
+
 DEFAULT_WEATHER_LOCATIONS = (
     "Midrand|-25.9992|28.1263|Africa/Johannesburg|hourly;"
     "Johannesburg|-26.2041|28.0473|Africa/Johannesburg;"
@@ -143,6 +148,7 @@ class AppConfig:
     openai_api_key: str
     openai_model: str
     market_pulse_enabled: bool
+    south_africa_feeds: list[FeedConfig] = field(default_factory=list)
     weather_locations: list[LocationConfig] = field(default_factory=list)
     devotional_subject_prefix: str = "Daily Motivation and Bible Verse"
     grocery_specials: GrocerySpecialsConfig = field(
@@ -270,6 +276,9 @@ def load_config(env_file: Path | None = None) -> AppConfig:
         ),
         news_feeds=_parse_feeds(_get("NEWS_FEEDS", DEFAULT_NEWS_FEEDS)),
         ai_tech_feeds=_parse_feeds(_get("AI_TECH_FEEDS", DEFAULT_AI_TECH_FEEDS)),
+        south_africa_feeds=_parse_feeds(
+            _get("SOUTH_AFRICA_NEWS_FEEDS", DEFAULT_SOUTH_AFRICA_FEEDS)
+        ),
         top_n=int(_get("TOP_N", "5")),
         openai_api_key=_get("OPENAI_API_KEY", ""),
         openai_model=_get("OPENAI_MODEL", "gpt-5"),

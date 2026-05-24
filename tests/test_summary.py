@@ -118,6 +118,7 @@ class SummaryTests(unittest.TestCase):
 
         payload = post_json_mock.call_args.kwargs["payload"]
         self.assertIn('"opener_style"', payload["input"])
+        self.assertIn('"south_africa_news"', payload["input"])
 
 
 def _weather() -> WeatherReport:

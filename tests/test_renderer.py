@@ -44,6 +44,33 @@ class RendererTests(unittest.TestCase):
         self.assertIn("https://example.com/ai", body)
         self.assertIn("Top AI and Tech Stories", body)
 
+    def test_render_text_puts_south_african_stories_before_world_news(self) -> None:
+        weather = _weather("Johannesburg")
+        south_africa_item = RankedItem(
+            title="SA story",
+            url="https://example.com/sa",
+            source="BusinessTech",
+            summary="A useful South African story.",
+        )
+        world_item = RankedItem(
+            title="World story",
+            url="https://example.com/world",
+            source="BBC World",
+            summary="A useful world story.",
+        )
+
+        body = render_text(
+            brief_date=datetime(2026, 5, 4),
+            weather_reports=[weather],
+            south_africa_items=[south_africa_item],
+            world_items=[world_item],
+            ai_tech_items=[],
+        )
+
+        self.assertIn("Top South African Stories", body)
+        self.assertLess(body.index("Top South African Stories"), body.index("Top World News"))
+        self.assertLess(body.index("SA story"), body.index("World story"))
+
     def test_render_text_shortens_long_summaries(self) -> None:
         weather = _weather("Johannesburg")
         item = RankedItem(
@@ -85,6 +112,33 @@ class RendererTests(unittest.TestCase):
         self.assertIn("Top World News", body)
         self.assertIn("Read story", body)
         self.assertIn("https://example.com/world", body)
+
+    def test_render_html_puts_south_african_stories_above_world_news(self) -> None:
+        weather = _weather("Johannesburg")
+        south_africa_item = RankedItem(
+            title="SA story",
+            url="https://example.com/sa",
+            source="BusinessTech",
+            summary="A useful South African story.",
+        )
+        world_item = RankedItem(
+            title="World story",
+            url="https://example.com/world",
+            source="BBC World",
+            summary="A useful world story.",
+        )
+
+        body = render_html(
+            brief_date=datetime(2026, 5, 4),
+            weather_reports=[weather],
+            south_africa_items=[south_africa_item],
+            world_items=[world_item],
+            ai_tech_items=[],
+        )
+
+        self.assertIn("Top South African Stories", body)
+        self.assertLess(body.index("Top South African Stories"), body.index("Top World News"))
+        self.assertLess(body.index("SA story"), body.index("World story"))
 
     def test_render_html_keeps_story_digest_space_adaptive(self) -> None:
         weather = _weather("Johannesburg")

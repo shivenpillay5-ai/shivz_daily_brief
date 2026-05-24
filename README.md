@@ -6,6 +6,7 @@ This is a small learning project that builds a daily email brief with:
 - weather snapshots for Johannesburg, Cape Town, and Durban
 - a market pulse with USD/ZAR, GBP/ZAR, gold, silver, and Brent crude
 - a short morning summary written from the day's signals
+- top 5 South African news links
 - top 5 world news links
 - top 5 AI and tech story links
 - an approved WhatsApp template version of the daily brief
@@ -15,7 +16,7 @@ This is a small learning project that builds a daily email brief with:
 
 The project is intentionally split into simple modules so you can learn how a practical agent is built:
 
-1. Collect raw context from APIs and RSS feeds.
+1. Collect raw context from APIs and RSS feeds, including South African, world, and AI/tech news.
 2. Pass the candidate stories through a ranking prompt.
 3. Write a concise morning summary from the selected facts.
 4. Render the answer into text and HTML.
@@ -473,7 +474,7 @@ The workflow uses `WHATSAPP_TEMPLATE_NAME=shivz_daily_brief_v1` and `WHATSAPP_TE
 
 ## How The Prompt Fits In
 
-`src/daily_brief/agent.py` coordinates the workflow: fetch weather, fetch news, rank stories, render the email, and send it.
+`src/daily_brief/agent.py` coordinates the workflow: fetch weather, fetch South African/world/AI news, rank stories, render the email, and send it.
 
 `src/daily_brief/skills/SKILL.md` contains the single skill definition for the project. It explains what the `Shivz Daily Brief` skill does, when the agent should use it, and which tools it relies on.
 
@@ -484,7 +485,7 @@ The workflow uses `WHATSAPP_TEMPLATE_NAME=shivz_daily_brief_v1` and `WHATSAPP_TE
 
 `src/daily_brief/prompts/ranking_prompt.py` contains the core model instruction. The program gives the model candidate stories that already include titles, links, sources, and summaries. The prompt tells the model to pick exactly the best 5 without inventing URLs.
 
-`src/daily_brief/prompts/summary_prompt.py` contains the morning-summary instruction. It gives the model the selected weather, market, world, and AI/tech facts and asks for a short reader-friendly summary without inventing details.
+`src/daily_brief/prompts/summary_prompt.py` contains the morning-summary instruction. It gives the model the selected weather, market, South African, world, and AI/tech facts and asks for a short reader-friendly summary without inventing details.
 
 `src/daily_brief/prompts/devotional_prompt.py` contains the devotional instruction. It gives the model one public-domain KJV verse and asks for a short practical reflection plus a broader motivational closing. If no OpenAI key is configured, the app uses the curated fallback reflection and motivational closing.
 
@@ -553,6 +554,10 @@ WHATSAPP_ACCESS_TOKEN=...
 WHATSAPP_TO=27821234567
 WHATSAPP_TEMPLATE_NAME=shivz_daily_brief_v1
 WHATSAPP_TEMPLATE_LANGUAGE=en
+
+SOUTH_AFRICA_NEWS_FEEDS=BusinessTech|https://businesstech.co.za/news/feed/;News24 South Africa|https://feeds.news24.com/articles/news24/SouthAfrica/rss
+NEWS_FEEDS=BBC World|https://feeds.bbci.co.uk/news/world/rss.xml;The Guardian World|https://www.theguardian.com/world/rss;NPR World|https://feeds.npr.org/1004/rss.xml;UN News|https://news.un.org/feed/subscribe/en/news/all/rss.xml
+AI_TECH_FEEDS=OpenAI News|https://openai.com/news/rss.xml;Google AI Blog|https://blog.google/technology/ai/rss/;TechCrunch AI|https://techcrunch.com/category/artificial-intelligence/feed/;VentureBeat AI|https://venturebeat.com/category/ai/feed/;MIT Technology Review AI|https://www.technologyreview.com/topic/artificial-intelligence/feed/
 ```
 
 Feed lists are semicolon-separated. Each entry is `Name|URL`.

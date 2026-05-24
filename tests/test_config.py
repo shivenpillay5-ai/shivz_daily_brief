@@ -90,6 +90,30 @@ class ConfigTests(unittest.TestCase):
     @patch.dict(
         "os.environ",
         {
+            "SOUTH_AFRICA_NEWS_FEEDS": (
+                "BusinessTech|https://businesstech.co.za/news/feed/;"
+                "News24 South Africa|https://feeds.news24.com/articles/news24/SouthAfrica/rss"
+            ),
+        },
+        clear=True,
+    )
+    def test_south_africa_news_feeds_are_parsed(self) -> None:
+        config = load_config()
+
+        self.assertEqual(
+            [(feed.name, feed.url) for feed in config.south_africa_feeds],
+            [
+                ("BusinessTech", "https://businesstech.co.za/news/feed/"),
+                (
+                    "News24 South Africa",
+                    "https://feeds.news24.com/articles/news24/SouthAfrica/rss",
+                ),
+            ],
+        )
+
+    @patch.dict(
+        "os.environ",
+        {
             "DEVOTIONAL_SUBJECT_PREFIX": "Morning Verse",
         },
         clear=True,

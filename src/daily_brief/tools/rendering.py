@@ -67,7 +67,9 @@ def render_text(
     morning_summary: MorningSummary | None = None,
     market_pulse: MarketPulse | None = None,
     warnings: list[str] | None = None,
+    south_africa_items: list[RankedItem] | None = None,
 ) -> str:
+    south_africa_items = south_africa_items or []
     lines = [
         f"☕ {BRIEF_NAME} - {brief_date:%A, %d %B %Y}",
         "",
@@ -89,6 +91,9 @@ def render_text(
     lines.extend(
         [
             "",
+            "Top South African Stories",
+            *_story_lines(south_africa_items),
+            "",
             "🌍 Top World News",
             *_story_lines(world_items),
             "",
@@ -98,7 +103,17 @@ def render_text(
     )
 
     if warnings:
-        lines.extend(["", f"Note: {len(warnings)} source did not respond cleanly. The brief continued without it."])
+        source_word = "source" if len(warnings) == 1 else "sources"
+        pronoun = "it" if len(warnings) == 1 else "them"
+        lines.extend(
+            [
+                "",
+                (
+                    f"Note: {len(warnings)} {source_word} did not respond cleanly. "
+                    f"The brief continued without {pronoun}."
+                ),
+            ]
+        )
 
     return "\n".join(lines)
 
@@ -111,7 +126,9 @@ def render_html(
     morning_summary: MorningSummary | None = None,
     market_pulse: MarketPulse | None = None,
     warnings: list[str] | None = None,
+    south_africa_items: list[RankedItem] | None = None,
 ) -> str:
+    south_africa_items = south_africa_items or []
     hero_intro = _hero_intro(brief_date)
     return f"""<!doctype html>
 <html lang="en">
@@ -160,6 +177,8 @@ def render_html(
                 {_divider_html()}
                 {_market_section_html(market_pulse)}
                 {_divider_html()}
+                {_section_html("ZA", "Top South African Stories", "Local headlines worth scanning first.", south_africa_items)}
+                {_divider_html()}
                 {_section_html("🌍", "Top World News", "The five stories worth scanning first.", world_items)}
                 {_divider_html()}
                 {_section_html("🤖", "Top AI and Tech Stories", "Signals from AI, platforms, research, and startup land.", ai_tech_items)}
@@ -187,7 +206,9 @@ def render_whatsapp_text(
     ai_tech_items: list[RankedItem],
     morning_summary: MorningSummary | None = None,
     market_pulse: MarketPulse | None = None,
+    south_africa_items: list[RankedItem] | None = None,
 ) -> str:
+    south_africa_items = south_africa_items or []
     lines = [
         f"☕ *{BRIEF_NAME}*",
         f"{brief_date:%A, %d %B %Y}",
@@ -197,6 +218,9 @@ def render_whatsapp_text(
         *_whatsapp_weather_lines(weather_reports),
         "",
         *_whatsapp_market_section_lines(market_pulse),
+        "*Top South African Stories*",
+        *_whatsapp_story_lines(south_africa_items[:3]),
+        "",
         "🌍 *Top World News*",
         *_whatsapp_story_lines(world_items[:3]),
         "",

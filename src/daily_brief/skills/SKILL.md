@@ -10,6 +10,7 @@ The brief includes:
 - Johannesburg, Cape Town, and Durban weather snapshots
 - a market pulse with USD/ZAR, GBP/ZAR, gold, silver, and Brent crude
 - a concise morning summary written from the collected facts
+- top South African news links
 - top world news links
 - top AI and tech story links
 - a polished HTML email layout
@@ -43,7 +44,7 @@ The agent coordinates the workflow in this order:
 1. Read configuration from `.env`.
 2. Fetch configured weather locations using the weather tool.
 3. Fetch market data using the market tool.
-4. Fetch world news and AI/tech news using the news tool.
+4. Fetch South African, world, and AI/tech news using the news tool.
 5. Rank stories using the ranking tool.
 6. Write the morning summary using the summary tool.
 7. Render the text, HTML email, and WhatsApp message using the rendering tool.

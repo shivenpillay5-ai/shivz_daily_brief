@@ -100,7 +100,11 @@ class AgentTests(unittest.TestCase):
         self.assertIn("Story", brief.whatsapp_template_parameters[2])
         self.assertIn("USD/ZAR", brief.text_body)
         self.assertIn("Morning Signal", brief.html_body)
-        self.assertEqual(enrich_story_summaries_mock.call_count, 2)
+        self.assertEqual(enrich_story_summaries_mock.call_count, 3)
+        self.assertIn(
+            "south_africa_items",
+            write_morning_summary_mock.call_args.kwargs,
+        )
 
     @patch("daily_brief.agent.build_daily_devotional")
     def test_agent_builds_devotional_brief(self, build_daily_devotional_mock) -> None:
