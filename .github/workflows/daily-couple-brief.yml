@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   repository_dispatch:
     types: [team-shinola-brief]
+  schedule:
+    # 09:17 Africa/Johannesburg. Keep this as a native fallback if external dispatch pauses.
+    - cron: "17 7 * * *"
 
 jobs:
   send-couple-brief:

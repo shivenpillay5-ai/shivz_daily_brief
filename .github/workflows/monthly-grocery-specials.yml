@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   repository_dispatch:
     types: [grocery-specials]
+  schedule:
+    # Monthly on the 26th at 18:17 Africa/Johannesburg.
+    - cron: "17 16 26 * *"
 
 jobs:
   send-grocery-specials:

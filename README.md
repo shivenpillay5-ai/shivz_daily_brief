@@ -308,9 +308,8 @@ Frankfurter, Gold API, and OilPriceAPI's no-key demo feed.
 
 The GitHub workflows run from GitHub's cloud runners. That means your local machine does not need to be on.
 
-The repository no longer relies on GitHub's native `schedule:` trigger because it did not fire reliably. Instead, an external scheduler should trigger GitHub with `repository_dispatch`.
-
-Each workflow also supports `repository_dispatch` as a fallback trigger for an external cloud scheduler:
+Each workflow has a native GitHub `schedule:` trigger and also supports
+`repository_dispatch` for an external cloud scheduler:
 
 ```text
 daily-brief
@@ -319,9 +318,19 @@ team-shinola-brief
 grocery-specials
 ```
 
-### External Scheduler Fallback
+The native GitHub schedules are:
 
-GitHub's native schedule trigger can be delayed or dropped, so the more reliable setup is:
+```text
+daily-brief          07:17 Africa/Johannesburg
+daily-devotional     07:29 Africa/Johannesburg
+team-shinola-brief   09:17 Africa/Johannesburg
+grocery-specials     Monthly on the 26th at 18:17 Africa/Johannesburg
+```
+
+### External Scheduler Backup
+
+GitHub's native schedule trigger can be delayed or dropped, so an external
+scheduler can be kept as a second wake-up path:
 
 1. GitHub Actions still does the real work.
 2. An external scheduler sends a tiny HTTPS POST to GitHub at the right time.
@@ -345,7 +354,10 @@ The command should print `Dispatched 'daily-brief'...` and GitHub Actions should
 
 Then create external scheduler jobs. `cron-job.org` is a simple free option that supports custom HTTP methods, headers, body data, test runs, and execution history.
 
-Use this URL for all three jobs:
+If both GitHub's native schedule and an external scheduler are active, keep the
+times aligned or disable one of them to avoid duplicate emails.
+
+Use this URL for all jobs:
 
 ```text
 https://api.github.com/repos/shivenpillay5-ai/shivz_daily_brief/dispatches

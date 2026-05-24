@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   repository_dispatch:
     types: [daily-brief]
+  schedule:
+    # 07:17 Africa/Johannesburg. Keep this as a native fallback if external dispatch pauses.
+    - cron: "17 5 * * *"
 
 jobs:
   send-brief:
