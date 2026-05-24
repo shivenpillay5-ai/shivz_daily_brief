@@ -308,8 +308,8 @@ Frankfurter, Gold API, and OilPriceAPI's no-key demo feed.
 
 The GitHub workflows run from GitHub's cloud runners. That means your local machine does not need to be on.
 
-Each workflow has a native GitHub `schedule:` trigger and also supports
-`repository_dispatch` for an external cloud scheduler:
+Each workflow supports `repository_dispatch` for Cronjob.org and also has a
+later native GitHub `schedule:` fallback:
 
 ```text
 daily-brief
@@ -318,7 +318,7 @@ team-shinola-brief
 grocery-specials
 ```
 
-The native GitHub schedules are:
+Cronjob.org is the primary trigger. Use these Cronjob.org schedules:
 
 ```text
 daily-brief          07:17 Africa/Johannesburg
@@ -327,10 +327,26 @@ team-shinola-brief   09:17 Africa/Johannesburg
 grocery-specials     Monthly on the 26th at 18:17 Africa/Johannesburg
 ```
 
-### External Scheduler Backup
+The native GitHub fallback schedules run later:
 
-GitHub's native schedule trigger can be delayed or dropped, so an external
-scheduler can be kept as a second wake-up path:
+```text
+daily-brief          08:17 Africa/Johannesburg
+daily-devotional     08:29 Africa/Johannesburg
+team-shinola-brief   10:17 Africa/Johannesburg
+grocery-specials     Monthly on the 26th at 19:17 Africa/Johannesburg
+```
+
+Each workflow writes a GitHub Actions cache marker after its email is sent.
+If another run for the same workflow starts on the same Africa/Johannesburg
+date, it skips the duplicate email. Workflow concurrency also keeps same-email
+runs in order so overlapping cron and fallback runs do not race each other.
+Manual workflow runs include a `force_send` input for intentionally sending
+again.
+
+### External Scheduler Primary
+
+GitHub's native schedule trigger can be delayed or dropped, so Cronjob.org is
+the preferred wake-up path:
 
 1. GitHub Actions still does the real work.
 2. An external scheduler sends a tiny HTTPS POST to GitHub at the right time.
@@ -353,9 +369,6 @@ $env:GITHUB_DISPATCH_TOKEN = "paste-token-here"
 The command should print `Dispatched 'daily-brief'...` and GitHub Actions should show a new `repository_dispatch` run.
 
 Then create external scheduler jobs. `cron-job.org` is a simple free option that supports custom HTTP methods, headers, body data, test runs, and execution history.
-
-If both GitHub's native schedule and an external scheduler are active, keep the
-times aligned or disable one of them to avoid duplicate emails.
 
 Use this URL for all jobs:
 
