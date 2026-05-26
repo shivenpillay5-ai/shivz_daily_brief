@@ -85,17 +85,22 @@ jobs:
             exit 0
           fi
 
+          runs_json="$(mktemp)"
+          trap 'rm -f "$runs_json"' EXIT
+          printf '%s' "$response" > "$runs_json"
+
           prior_success="$(
-            RUNS_JSON="$response" python3 - "$MARKER_DATE" "$GITHUB_RUN_ID" <<'PY'
+            python3 - "$MARKER_DATE" "$GITHUB_RUN_ID" "$runs_json" <<'PY'
           import json
-          import os
           import sys
           from datetime import datetime
           from zoneinfo import ZoneInfo
 
           target_date = sys.argv[1]
           current_run_id = sys.argv[2]
-          data = json.loads(os.environ["RUNS_JSON"])
+          runs_json_path = sys.argv[3]
+          with open(runs_json_path, encoding="utf-8") as runs_json_file:
+              data = json.load(runs_json_file)
           timezone = ZoneInfo("Africa/Johannesburg")
 
           for run in data.get("workflow_runs", []):
